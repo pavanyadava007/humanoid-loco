@@ -56,6 +56,7 @@ isaac-play:
 	$(ISAAC_ENV) $(IPY) scripts/isaac/play_export.py --headless --enable_cameras --name g1_flat
 	$(PY) scripts/isaac/make_video.py --name g1_flat
 	$(PY) scripts/isaac/compare_models.py --name g1_flat
+	$(PY) scripts/isaac/make_compare_video.py
 
 isaac-eval:
 	$(ISAAC_ENV) $(IPY) scripts/isaac/eval_g1.py --all --name g1_flat --episodes 500

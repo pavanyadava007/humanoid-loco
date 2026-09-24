@@ -4,8 +4,8 @@
     "gpu": "NVIDIA L4",
     "host_cpu_count": 32,
     "python": "3.10.21",
-    "git_rev": "ba71cbd",
-    "written_utc": "2026-09-24T20:41:44+00:00"
+    "git_rev": "75abe74",
+    "written_utc": "2026-09-24T21:48:16+00:00"
   },
   "file": "media/isaac_g1_flat.mp4",
   "source": "Isaac Lab RecordVideo (rgb_array render of the viewport camera), transcoded with ffmpeg",
@@ -19,13 +19,23 @@
     "frames": 499,
     "duration_s": 9.98
   },
+  "trimmed_leading_frames": 2,
+  "trimmed_start_s": 0.04,
+  "trim_rule": "leading raw frames whose mean luma differs from the video median by more than 15% (renderer warm-up)",
+  "leading_raw_frame_luma": [
+    16.0,
+    184.009,
+    133.646,
+    134.297,
+    135.695
+  ],
   "crf": 24,
-  "bytes": 1292295,
+  "bytes": 1291324,
   "codec": "h264",
   "pix_fmt": "yuv420p",
   "width": 960,
   "height": 540,
   "fps": "25/1",
-  "frames": 250,
-  "duration_s": 10.0
+  "frames": 249,
+  "duration_s": 9.96
 }

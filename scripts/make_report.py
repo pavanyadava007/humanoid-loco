@@ -322,6 +322,12 @@ def isaac_play_rows() -> list[str]:
                         f"{vid['bytes'] / 1e6:.2f} MB); command vx={v['command_vx_vy_wz'][0]} m/s held constant, env 0 fell: "
                         f"{v['env0_fell']}, env 0 net displacement {v['env0_net_displacement_m']:.2f} m over "
                         f"{v['steps'] * v['policy_dt_s']:.0f} s ({v['note']}).")
+        if vid and vid.get("trimmed_leading_frames"):
+            rows.append(f"  Leading renderer warm-up frames trimmed: {vid['trimmed_leading_frames']} ({vid['trim_rule']}).")
+    cmp = load("compare_video.json")
+    if cmp:
+        rows.append(f"- Side-by-side clip `{cmp['file']}`: left {cmp['left']['what']}; right {cmp['right']['what']}; "
+                    f"{cmp['duration_s_each']:.1f} s each ({cmp['note']}).")
     return rows or ["_no export / video_"]
 
 

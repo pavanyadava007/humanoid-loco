@@ -46,3 +46,10 @@ def test_compare_joint_sets():
     assert not diff["one_to_one"]
     assert diff["isaac_only"] == ["x"] and diff["mujoco_only"] == ["y"]
     assert not diff["same_order_for_common"]
+
+
+def test_warmup_trim():
+    mv = _load("make_video")
+    assert mv.warmup_frames([16.0, 184.0, 133.6, 134.3, 135.7, 136.1]) == 2
+    assert mv.warmup_frames([130.0, 131.0, 129.0]) == 0
+    assert mv.warmup_frames([]) == 0

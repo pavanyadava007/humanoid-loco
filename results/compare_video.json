@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "label": "NVIDIA L4, simulation, no real robot",
+    "gpu": "NVIDIA L4",
+    "host_cpu_count": 32,
+    "python": "3.10.21",
+    "git_rev": "75abe74",
+    "written_utc": "2026-09-24T21:48:32+00:00"
+  },
+  "file": "media/compare_mujoco_vs_isaac.mp4",
+  "left": {
+    "file": "media/brax_dr_mujoco_cpu.mp4",
+    "what": "brax PPO + DR policy (Menagerie G1), plain CPU MuJoCo, sim-to-sim"
+  },
+  "right": {
+    "file": "media/isaac_g1_flat.mp4",
+    "what": "Isaac Lab RSL-RL PPO policy (Isaac Lab G1), Isaac Sim, training simulator"
+  },
+  "duration_s_each": 9.96,
+  "height_px": 360,
+  "crf": 26,
+  "bytes": 830272,
+  "out_codec": "h264",
+  "out_pix_fmt": "yuv420p",
+  "out_width": 1280,
+  "out_height": 360,
+  "out_fps": "25/1",
+  "out_frames": 249,
+  "out_duration_s": 9.96,
+  "note": "different policies, robot models, commands and simulators; visual impression only"
+}

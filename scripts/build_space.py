@@ -71,6 +71,12 @@ def isaac_section() -> tuple[str, str, str]:
                f"{tr['final_step'] / 1e6:.1f}M env steps in {tr['wall_clock_s'] / 60:.0f} minutes on one NVIDIA L4. Constant command "
                f"{e(v['command_vx_vy_wz'][0])} m/s forward; the camera follows one robot (Isaac Lab G1, {e(play['model']['num_joints'])} joints). "
                "Trained and shown in the same simulator: this is not a transfer test.</figcaption></figure>")
+    cmp = load_opt("compare_video.json")
+    if cmp and (ROOT / cmp["file"]).exists():
+        fig += ("<figure class='vid big'><video src='media/compare_mujoco_vs_isaac.mp4' poster='media/compare_mujoco_vs_isaac.jpg' "
+                "controls muted loop playsinline preload=metadata></video><figcaption><b>Side by side: CPU MuJoCo (left) and Isaac Sim (right)</b><br>"
+                "Left: brax PPO + DR policy on the Menagerie G1 in plain CPU MuJoCo. Right: Isaac Lab RSL-RL policy on the Isaac Lab G1 in Isaac Sim. "
+                "Different policies, robot models, commands and simulators; a visual impression, not a matched comparison.</figcaption></figure>")
     rows = []
     isaac_labels = dict(CONDITIONS)
     isaac_labels.update({"friction_x0.5": "robot contact friction x0.5", "friction_x1.5": "robot contact friction x1.5",
@@ -117,8 +123,13 @@ def main() -> None:
     isaac_fig, isaac_body, isaac_limit = isaac_section()
     if isaac_fig:
         shutil.copy2(ROOT / "media" / "isaac_g1_flat.mp4", OUT / "media" / "isaac_g1_flat.mp4")
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "4", "-i", str(ROOT / "media" / "isaac_g1_flat.mp4"),
-                        "-frames:v", "1", "-q:v", "4", str(OUT / "media" / "isaac_g1_flat.jpg")], check=True)
+        for fname in ("isaac_g1_flat.mp4", "compare_mujoco_vs_isaac.mp4"):
+            if not (ROOT / "media" / fname).exists():
+                continue
+            if fname != "isaac_g1_flat.mp4":
+                shutil.copy2(ROOT / "media" / fname, OUT / "media" / fname)
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "4", "-i", str(ROOT / "media" / fname),
+                            "-frames:v", "1", "-q:v", "4", str(OUT / "media" / fname.replace(".mp4", ".jpg"))], check=True)
 
     train = load("train_brax_dr.json")
     s2s = {p: load(f"sim2sim_{p}.json") for p, _ in POLICIES}

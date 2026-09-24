@@ -17,6 +17,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from hloco.common import MEDIA, RESULTS, ROOT, read_json, write_json  # noqa: E402
 
 MAX_BYTES = 5 * 1024 * 1024
+WARMUP_TOL = 0.15  # a leading frame is warm-up if its mean luma is off the video median by more than 15%
+
+
+def frame_luma(path: Path) -> list[float]:
+    out = subprocess.run(["ffprobe", "-v", "error", "-f", "lavfi", "-i", f"movie={path},signalstats",
+                          "-show_entries", "frame_tags=lavfi.signalstats.YAVG", "-of", "csv=p=0"],
+                         capture_output=True, text=True, check=True).stdout
+    return [float(x.strip(",")) for x in out.split() if x.strip(",")]
+
+
+def warmup_frames(luma: list[float], tol: float = WARMUP_TOL) -> int:
+    """Number of leading frames whose mean luma is far from the median (renderer warm-up: black or flash)."""
+    if not luma:
+        return 0
+    med = sorted(luma)[len(luma) // 2]
+    for i, y in enumerate(luma):
+        if abs(y - med) <= tol * med:
+            return i
+    return 0
 
 
 def probe(path: Path) -> dict:
@@ -38,8 +57,14 @@ def main() -> None:
     raw = ROOT / play["video"]["raw_file"]
     out = MEDIA / f"isaac_{args.name}.mp4"
     MEDIA.mkdir(exist_ok=True)
+    raw_info = probe(raw)
+    num, den = (int(x) for x in raw_info["fps"].split("/"))
+    luma = frame_luma(raw)
+    n_trim = warmup_frames(luma)
+    start_s = n_trim * den / num
     for crf in (24, 28, 32, 36):
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(raw), "-vf", f"fps={args.fps}", "-c:v", "libx264",
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{start_s:.4f}", "-i", str(raw), "-vf", f"fps={args.fps}",
+                        "-c:v", "libx264",
                         "-preset", "slow", "-crf", str(crf), "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an",
                         str(out)], check=True)
         if out.stat().st_size <= MAX_BYTES:
@@ -49,7 +74,12 @@ def main() -> None:
         "file": str(out.relative_to(ROOT)),
         "source": "Isaac Lab RecordVideo (rgb_array render of the viewport camera), transcoded with ffmpeg",
         "raw_file": play["video"]["raw_file"],
-        "raw_probe": probe(raw),
+        "raw_probe": raw_info,
+        "trimmed_leading_frames": n_trim,
+        "trimmed_start_s": start_s,
+        "trim_rule": f"leading raw frames whose mean luma differs from the video median by more than {WARMUP_TOL:.0%} "
+                     "(renderer warm-up)",
+        "leading_raw_frame_luma": luma[: n_trim + 3],
         "crf": crf,
         "bytes": out.stat().st_size,
         **info,
