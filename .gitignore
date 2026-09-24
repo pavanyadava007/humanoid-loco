@@ -9,3 +9,4 @@ logs/
 .ruff_cache/
 checkpoints/*/snapshots/
 space/
+third_party/

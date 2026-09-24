@@ -227,66 +227,213 @@ def scheduling_rows() -> list[str]:
     return rows
 
 
+ISAAC_RUNS = [("g1_flat", "Isaac-Velocity-Flat-G1-v0"), ("g1_rough", "Isaac-Velocity-Rough-G1-v0")]
+ISAAC_LABEL = "within Isaac Sim (PhysX), not sim-to-sim"
+
+
+def isaac_headline() -> list[str]:
+    rows = ["| Isaac Lab policy | task | env steps | training wall clock | nominal fall rate [Wilson 95%] | nominal lin-vel err (m/s) | worst condition (fall rate) |",
+            "|---|---|---|---|---|---|---|"]
+    n = 0
+    for name, task in ISAAC_RUNS:
+        tr, ev = load(f"isaac_train_{name}.json"), load(f"isaac_eval_{name}.json")
+        if tr is None:
+            continue
+        n += 1
+        if ev and ev["summary"].get("nominal"):
+            nom = ev["summary"]["nominal"]
+            worst = max(ev["summary"].items(), key=lambda kv: kv[1]["fall_rate"])
+            nomtxt = f"{pct(nom['fall_rate'])} {ci_pct(nom['fall_rate_wilson95'])} (n={nom['episodes']})"
+            err, worsttxt = f(nom["lin_vel_err_mean"]), f"{worst[0]} ({pct(worst[1]['fall_rate'])})"
+        else:
+            nomtxt, err, worsttxt = "not evaluated", "n/a", "n/a"
+        rows.append(f"| RSL-RL PPO ({name}) | {task} | {tr['final_step']:,} | {hms(tr['wall_clock_s'])} | {nomtxt} | {err} | {worsttxt} |")
+    return rows if n else []
+
+
+def isaac_training_rows() -> list[str]:
+    rows = ["| run | task | envs | iterations | env steps | wall clock | env steps/s (steady) | final mean episode reward / length | status | source |",
+            "|---|---|---|---|---|---|---|---|---|---|"]
+    curves = []
+    for name, task in ISAAC_RUNS:
+        tr = load(f"isaac_train_{name}.json")
+        if tr is None:
+            continue
+        last = next((r for r in reversed(tr["curve"]) if "mean_episode_reward" in r), {})
+        rows.append(f"| {name} | {task} | {tr['num_envs']} | {tr['iterations_completed']} of {tr['requested_max_iterations']} | "
+                    f"{tr['final_step']:,} | {hms(tr['wall_clock_s'])} | {f(tr.get('env_steps_per_s_steady'), 0)} | "
+                    f"{f(last.get('mean_episode_reward'), 2)} / {f(last.get('mean_episode_length'), 1)} | {tr['status']} | "
+                    f"`results/isaac_train_{name}.json` |")
+        c = [r for r in tr["curve"] if "mean_episode_reward" in r]
+        if c:
+            k = 12
+            idx = sorted({round(i * (len(c) - 1) / (k - 1)) for i in range(k)}) if len(c) > k else range(len(c))
+            curves += ["", f"**{name}** curve (`results/isaac_train_{name}.json`; mean over the last 100 finished training episodes; "
+                       "episode length in 50 Hz policy steps, 1000 = full 20 s episode)", "",
+                       "| iteration | env steps | wall clock | mean episode reward | mean episode length | action noise std |",
+                       "|---|---|---|---|---|---|"]
+            for i in idx:
+                r = c[i]
+                curves.append(f"| {r['iteration']} | {r['step']:,} | {hms(r['wall_s'])} | {f(r['mean_episode_reward'], 2)} | "
+                              f"{f(r['mean_episode_length'], 1)} | {f(r.get('action_noise_std'), 3)} |")
+    return (rows + curves) if len(rows) > 2 else ["_no Isaac Lab training run_"]
+
+
+def isaac_eval_rows() -> list[str]:
+    out = []
+    for name, task in ISAAC_RUNS:
+        ev = load(f"isaac_eval_{name}.json")
+        if ev is None:
+            continue
+        out += [f"**{name}** ({task} policy, {ISAAC_LABEL}; `results/isaac_eval_{name}.json`, "
+                f"{ev['episodes_per_condition']} episodes of {ev['episode_steps']} steps per condition)", "",
+                "| condition | fall rate [Wilson 95%] | falls / n | lin-vel err m/s [95% CI] | yaw-rate err rad/s [95% CI] | mean survival s | not fallen but base below 0.5 m at the end |",
+                "|---|---|---|---|---|---|---|"]
+        for c, s in ev["summary"].items():
+            out.append(f"| {c} | {pct(s['fall_rate'])} {ci_pct(s['fall_rate_wilson95'])} | {s['falls']}/{s['episodes']} | "
+                       f"{f(s['lin_vel_err_mean'])} [{f(s['lin_vel_err_ci95'][0])}, {f(s['lin_vel_err_ci95'][1])}] | "
+                       f"{f(s['yaw_rate_err_mean'])} [{f(s['yaw_rate_err_ci95'][0])}, {f(s['yaw_rate_err_ci95'][1])}] | "
+                       f"{f(s['survival_s_mean'], 1)} | {s['ended_low_count']} |")
+        for c, msg in ev.get("failed_conditions", {}).items():
+            out.append(f"| {c} | failed: {msg} | | | | | |")
+        out.append("")
+    return out or ["_Isaac Lab evaluation not run_"]
+
+
+def isaac_play_rows() -> list[str]:
+    rows = []
+    for name, _ in ISAAC_RUNS:
+        p = load(f"isaac_play_{name}.json")
+        if p is None:
+            continue
+        ex, par, v = p["exported"], p["parity"], p["video"]
+        rows.append(f"- {name}: checkpoint iteration {p['checkpoint_iteration']}, exported with Isaac Lab's exporters to "
+                    f"`{ex['policy_pt']}` (TorchScript) and `{ex['policy_onnx']}` (ONNX opset {ex['onnx_opset']}). "
+                    f"Max abs action difference over {par['n_obs']} rollout observations: ONNX vs RSL-RL actor "
+                    f"{par['max_abs_err_onnx_vs_actor']:.2e}, TorchScript vs actor {par['max_abs_err_jit_vs_actor']:.2e} "
+                    f"(`results/isaac_play_{name}.json`).")
+        vid = load(f"isaac_video_{name}.json")
+        if vid:
+            rows.append(f"- {name} video: `{vid['file']}` ({vid['duration_s']:.1f} s, {vid['width']}x{vid['height']}, "
+                        f"{vid['bytes'] / 1e6:.2f} MB); command vx={v['command_vx_vy_wz'][0]} m/s held constant, env 0 fell: "
+                        f"{v['env0_fell']}, env 0 net displacement {v['env0_net_displacement_m']:.2f} m over "
+                        f"{v['steps'] * v['policy_dt_s']:.0f} s ({v['note']}).")
+    return rows or ["_no export / video_"]
+
+
+def isaac_mapping_rows() -> list[str]:
+    m = load("isaac_mujoco_mapping.json")
+    if m is None:
+        return ["_model comparison not run_"]
+    j = m["joints"]
+    rows = [f"- Isaac Lab G1 action joints: {j['isaac_num_joints']}; Playground/Menagerie G1 actuators: "
+            f"{j['mujoco_num_actuated_joints']}; joints with the same name: {len(j['common'])} "
+            f"(`results/isaac_mujoco_mapping.json`).",
+            f"- Isaac-only joints ({len(j['isaac_only'])}): {', '.join(j['isaac_only'])}.",
+            f"- MuJoCo-only joints ({len(j['mujoco_only'])}): {', '.join(j['mujoco_only'])}.",
+            f"- Observation: Isaac policy {m['isaac_obs_dim']}-dim ({', '.join(f'{k} {v[0]}' for k, v in m['isaac_obs_terms'].items())}); "
+            f"Playground actor {m['playground_obs_dim']}-dim.",
+            f"- Decision: **{m['decision']}**."]
+    rows += [f"- Blocker: {b}" for b in m["blockers"]]
+    return rows
+
+
 def isaac_rows() -> list[str]:
+    rows = []
+    if load("isaac_train_g1_flat.json"):
+        rows += [f"Isaac Sim + Isaac Lab were installed and run on this host; every evaluation number in this section is {ISAAC_LABEL}. "
+                 "Install record, workarounds and protocol: docs/ISAAC_LAB.md.", "", "### Headline", "", *isaac_headline(), "",
+                 "### Training", "", *isaac_training_rows(), "", "### Export and video", "", *isaac_play_rows(), "",
+                 "### Evaluation inside Isaac Sim", "", *isaac_eval_rows(),
+                 "### Isaac Lab G1 vs Playground/Menagerie G1 (for sim-to-sim)", "", *isaac_mapping_rows()]
     r = load("isaac_lab_check.json")
-    if r is None:
-        return ["_feasibility check not run_"]
-    return [f"- Verdict: **{r['verdict']}** (`results/isaac_lab_check.json`, details in docs/ISAAC_LAB.md)."]
+    if r is not None:
+        rows += ["", f"- Earlier feasibility check (before the install, `results/isaac_lab_check.json`): {r['verdict']}."]
+    return rows or ["_Isaac Lab not run_"]
 
 
 def isaac_doc() -> str | None:
-    r = load("isaac_lab_check.json")
-    if r is None:
+    inst = load("isaac_install.json")
+    if inst is None:
         return None
+    v = inst["versions"]
+    gb = inst["disk_bytes"]
+    sm = inst["smoke_test"]
     lines = [
-        "# Isaac Lab feasibility check",
+        "# Isaac Lab track",
         "",
-        "Generated by `python scripts/make_report.py` from `results/isaac_lab_check.json` "
-        "(written by `python scripts/isaac_lab_check.py`). Do not edit by hand.",
+        "Generated by `python scripts/make_report.py` from `results/isaac_*.json`. Do not edit by hand. "
+        f"All numbers: **{HARDWARE_LABEL}**; evaluation numbers are {ISAAC_LABEL}.",
         "",
-        "Isaac Lab runs on top of NVIDIA Isaac Sim. The check only reads the NVIDIA pip index "
-        f"({r['index']}), sends HTTP HEAD requests for wheel sizes and downloads only small meta wheels to read their "
-        f"pinned requirements ({r['wheel_bytes_downloaded'] / 1e6:.1f} MB in total); it installs nothing.",
+        "## What was run",
         "",
-        "## Host",
+        "1. NVIDIA Isaac Sim and Isaac Lab installed from pip wheels and a git tag into a separate venv (`scripts/isaac/setup_isaac.sh`).",
+        "2. Isaac Lab's registered Unitree G1 velocity-tracking task trained with RSL-RL PPO, the task's own env and runner "
+        "config unchanged except num_envs, seed and a wall-clock cap (`scripts/isaac/train_g1.py`).",
+        "3. Policy exported with Isaac Lab's exporters (TorchScript + ONNX), parity-checked, and one headless video recorded "
+        "(`scripts/isaac/play_export.py`).",
+        "4. Policy evaluated inside Isaac Sim under perturbations (`scripts/isaac/eval_g1.py`).",
+        "5. Isaac Lab G1 compared joint by joint with the Playground/Menagerie G1 to decide whether an Isaac to MuJoCo "
+        "sim-to-sim test is possible (`scripts/isaac/compare_models.py`).",
         "",
-        f"- OS: {r['host_os']}",
-        f"- glibc: {r['host_glibc']}",
-        f"- Python (project venv): {r['host_python']}",
-        f"- GPU / driver: {r['gpu_and_driver']}",
-        f"- Free disk at check time: {r['free_disk_gb']} GB",
+        "## Install on this host",
         "",
-        "## Isaac Sim wheels on the index (Linux x86_64)",
+        f"- Host: {inst['host_os']}, glibc {inst['glibc']}, {inst['venv']}. Amazon Linux is not an Isaac Sim supported OS; "
+        "it worked here with the fixes listed below.",
+        f"- Versions: isaacsim {v.get('isaacsim')}, Isaac Lab {inst['isaac_lab_git_tag']} (isaaclab {v.get('isaaclab')}, "
+        f"isaaclab_tasks {v.get('isaaclab_tasks')}, isaaclab_rl {v.get('isaaclab_rl')}), rsl-rl-lib {v.get('rsl-rl-lib')}, "
+        f"torch {v.get('torch')}, numpy {v.get('numpy')}.",
+        f"- Install time: torch {f(inst['install_torch_s'], 0)} s, Isaac Sim wheels {f(inst['install_isaacsim_s'], 0)} s, "
+        f"Isaac Lab packages {f(inst['install_isaaclab_s'], 0)} s (download + install, from the install logs).",
+        f"- Disk: `.venv-isaac` {gb['.venv-isaac'] / 1e9:.1f} GB, Isaac Lab checkout {gb['third_party/IsaacLab'] / 1e9:.2f} GB; "
+        + "; ".join(f"{k} {val / 1e9:.2f} GB" for k, val in gb.items() if k.startswith("~/") and val is not None)
+        + f". {inst['note_disk']}",
+        "- Filesystem during the Isaac Sim install: " + " -> ".join(ln.split()[2] + " used" for ln in inst["df_lines_during_isaacsim_install"]) + ".",
+        f"- Smoke test: `{sm['command']}` exited with code {sm['exit_code']}, graphics API {sm['graphics_api']}, "
+        f"{sm['iterations_logged']} iterations logged, last iteration {sm['last_iteration_steps_per_s']} steps/s. "
+        "Vulkan worked through the NVIDIA ICD already on the host (`/etc/vulkan/icd.d/nvidia_icd.json`).",
+        f"- {inst['eula']}.",
         "",
-        "| package | glibc tags | python tags | newest wheel installable with host glibc | its size (HEAD) | newest wheel overall | its size (HEAD) |",
-        "|---|---|---|---|---|---|---|",
+        "Problems hit and fixes (all in `scripts/isaac/setup_isaac.sh`):",
+        "",
+        "- Isaac Sim 5.x/6.x wheels need glibc 2.35, so Isaac Sim 4.5.0 (glibc 2.34 wheels, Python 3.10) and Isaac Lab "
+        "v2.1.1 (the last tag for Isaac Sim 4.5) were used.",
+        "- `isaaclab.sh -i` replaces torch with 2.7.0+cu128 at this tag; the Isaac Lab packages were installed with uv and a "
+        "constraint that keeps torch 2.5.1+cu121.",
+        "- `flatdict==4.0.1` failed to build (`ModuleNotFoundError: No module named 'pkg_resources'` in an isolated build "
+        "env with a new setuptools); fixed by installing setuptools<80 and building flatdict without build isolation.",
+        f"- {inst['extra_system_package']}.",
+        "- Isaac Lab's ONNX exporter writes a static batch of 1, so the ONNX parity check runs one observation at a time.",
+        "",
+        "## Results",
+        "",
+        *isaac_rows(),
+        "",
+        "## Notes on the protocol",
+        "",
+        "- The Isaac evaluation is not the CPU MuJoCo sim-to-sim table: different robot model (see the joint comparison), "
+        "different simulator, different fall definition (Isaac: the task's torso_link contact termination; CPU MuJoCo: "
+        "Playground's up-vector and foot-contact termination) and different command ranges (Isaac: vx 0 to 1 m/s as in "
+        "its training config; MuJoCo: vx -1 to 1 m/s). Compare policies within one table only.",
+        "- Isaac perturbations: friction scales the robot's rigid-body material (static 0.8 / dynamic 0.6 nominal; the ground material is 1.0 "
+        "with combine mode multiply); torso mass adds +/-3 kg to torso_link at startup (the flat G1 task trains with no "
+        "mass randomization); pushes add a 0.5 to 1.5 m/s horizontal base-velocity kick every 2 to 4 s (same as the CPU "
+        "MuJoCo push condition; the flat G1 task trains with no pushes); action delay feeds the env the action from 1 or 2 "
+        "policy steps earlier (the observation's last-action slot then holds the delayed action); sensor noise turns on the "
+        "task's own observation noise.",
+        "- Episodes run in parallel (one env per episode) with env seed 10000; commands and start poses come from the "
+        "task's reset events, so episodes are not paired across conditions the way the CPU MuJoCo episodes are.",
+        "- The Isaac-trained policy is a different network for a different robot model than the MuJoCo Playground policies; "
+        "its numbers say nothing about the Playground policies and vice versa.",
+        "",
     ]
-    def mb(x):
-        return "n/a" if x is None else f"{x / 1e6:.1f} MB"
-    for pkg, info in r["packages"].items():
-        if "error" in info:
-            lines.append(f"| {pkg} | error: {info['error']} | | | | | |")
-            continue
-        lines.append(f"| {pkg} | {', '.join(info['manylinux_glibc_tags'])} | {', '.join(info['python_tags'])} | "
-                     f"{info['newest_host_installable_wheel']} | {mb(info['newest_host_installable_wheel_bytes_HEAD'])} | "
-                     f"{info['latest_wheel']} | {mb(info['latest_wheel_bytes_HEAD'])} |")
-    inst = r.get("isaacsim_4_5_install", {})
-    if "total_wheel_bytes" in inst:
-        lines += ["", f"## Download size of `pip install isaacsim[{','.join(inst['extras'])}]=={inst['isaacsim_version']}`", "",
-                  f"Sum of HEAD sizes of the {len(inst['wheels'])} wheels hosted on the NVIDIA index: "
-                  f"**{inst['total_wheel_bytes'] / 1e9:.2f} GB** (to read pinned requirements, "
-                  f"{inst['metadata_wheel_bytes_downloaded'] / 1e6:.1f} MB of small meta wheels were downloaded). Largest wheels:", "",
-                  "| wheel | size |", "|---|---|"]
-        for name, size in sorted(inst["wheels"].items(), key=lambda kv: -(kv[1] or 0))[:5]:
-            lines.append(f"| {name} | {mb(size)} |")
-        ne = r.get("isaacsim_4_5_install_without_extscache", {})
-        if "total_wheel_bytes" in ne:
-            lines += ["", f"Without the `extscache` extras: {ne['total_wheel_bytes'] / 1e9:.2f} GB over {len(ne['wheels'])} wheels."]
-    lines += ["", f"## Verdict: {r['verdict']}", ""]
-    lines += [f"- Blocker: {b}" for b in r["blockers"]] or ["- No blocker found."]
-    lines += [""] + [f"- Note: {n}" for n in r.get("notes", [])]
-    lines += ["", "Consequence for this repo: no Isaac Lab training or evaluation was run. All results come from "
-              "MuJoCo Playground (MJX) training and plain CPU MuJoCo evaluation.", ""]
+    r = load("isaac_lab_check.json")
+    if r is not None:
+        lines += ["## Earlier feasibility check", "",
+                  f"Before the install, `scripts/isaac_lab_check.py` measured the Isaac Sim 4.5 wheel download at "
+                  f"{r['isaacsim_4_5_install']['total_wheel_bytes'] / 1e9:.2f} GB and stopped at a 2 GB download cap set at the "
+                  f"time (verdict: {r['verdict']}). The cap was lifted for this track; `results/isaac_lab_check.json` is kept "
+                  "as the record of that check.", ""]
     return "\n".join(lines)
 
 
@@ -346,12 +493,15 @@ def main() -> None:
         "# Results",
         "",
         f"All numbers: **{HARDWARE_LABEL}**. Generated by `python scripts/make_report.py` from `results/*.json`; do not edit by hand.",
-        "Transfer between simulators is sim-to-sim (MJX to CPU MuJoCo), not sim-to-real.",
+        "Transfer between simulators is sim-to-sim (MJX to CPU MuJoCo), not sim-to-real. "
+        "The Isaac Lab numbers are measured inside Isaac Sim (PhysX), not sim-to-sim.",
         "",
         "## Headline",
         "",
         *headline(),
         "",
+        *([f"Isaac Lab track ({ISAAC_LABEL}; details in the Isaac Lab section and docs/ISAAC_LAB.md):", "", *isaac_headline(), ""]
+          if isaac_headline() else []),
         "## Training runs",
         "",
         *training_table(),
@@ -428,7 +578,8 @@ def main() -> None:
     if readme.exists():
         r = readme.read_text()
         block = "<!-- RESULTS:BEGIN -->\n" + "\n".join(
-            [f"_Generated from results/*.json by scripts/make_report.py. {HARDWARE_LABEL}._", "", *headline()]) + "\n<!-- RESULTS:END -->"
+            [f"_Generated from results/*.json by scripts/make_report.py. {HARDWARE_LABEL}._", "", *headline(),
+             *(["", f"Isaac Lab track ({ISAAC_LABEL}):", "", *isaac_headline()] if isaac_headline() else [])]) + "\n<!-- RESULTS:END -->"
         r = re.sub(r"<!-- RESULTS:BEGIN -->.*?<!-- RESULTS:END -->", lambda _m: block, r, flags=re.S)
         readme.write_text(r)
     print("wrote docs/RESULTS.md")

@@ -51,6 +51,55 @@ def pct(x: float) -> str:
     return f"{100 * x:.1f}%"
 
 
+def load_opt(name: str) -> dict | None:
+    p = RESULTS / name
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def isaac_section() -> tuple[str, str, str]:
+    """(video figure html, results html, limits bullet) for the Isaac Lab track, from results/isaac_*.json."""
+    tr, ev, vid = load_opt("isaac_train_g1_flat.json"), load_opt("isaac_eval_g1_flat.json"), load_opt("isaac_video_g1_flat.json")
+    play, mp = load_opt("isaac_play_g1_flat.json"), load_opt("isaac_mujoco_mapping.json")
+    if tr is None:
+        return "", "", "<li>Isaac Lab was not run on this host; see the repository.</li>"
+    fig = ""
+    if vid and play:
+        v = play["video"]
+        fig = (f"<figure class='vid big'><video src='media/isaac_g1_flat.mp4' poster='media/isaac_g1_flat.jpg' controls muted loop "
+               f"playsinline preload=metadata></video><figcaption><b>Isaac Lab: RSL-RL PPO, Isaac-Velocity-Flat-G1-v0, in Isaac Sim (PhysX)</b><br>"
+               f"{tr['final_step'] / 1e6:.1f}M env steps in {tr['wall_clock_s'] / 60:.0f} minutes on one NVIDIA L4. Constant command "
+               f"{e(v['command_vx_vy_wz'][0])} m/s forward; the camera follows one robot (Isaac Lab G1, {e(play['model']['num_joints'])} joints). "
+               "Trained and shown in the same simulator: this is not a transfer test.</figcaption></figure>")
+    rows = []
+    if ev:
+        for c, lbl in CONDITIONS:
+            s_ = ev["summary"].get(c)
+            if s_ is None:
+                continue
+            rows.append(f"<tr><td>{e(lbl)}</td><td>{s_['falls']}/{s_['episodes']}<span class=ci>{pct(s_['fall_rate'])} "
+                        f"[{pct(s_['fall_rate_wilson95'][0])}, {pct(s_['fall_rate_wilson95'][1])}]</span></td>"
+                        f"<td>{s_['lin_vel_err_mean']:.3f}</td><td>{s_['yaw_rate_err_mean']:.3f}</td></tr>")
+    table = ("<div class=tw><table><tr><th>condition</th><th>falls (Wilson 95%)</th><th>lin-vel error m/s</th>"
+             f"<th>yaw-rate error rad/s</th></tr>{''.join(rows)}</table></div>") if rows else "<p class=note>Evaluation not run.</p>"
+    last = next((r for r in reversed(tr["curve"]) if "mean_episode_length" in r), {})
+    mp_txt = ""
+    if mp:
+        j = mp["joints"]
+        mp_txt = (f"<p class=note>Isaac to MuJoCo sim-to-sim was not attempted: the Isaac Lab G1 has {j['isaac_num_joints']} action joints "
+                  f"(with hands), the Menagerie G1 used above has {j['mujoco_num_actuated_joints']} actuators, and only {len(j['common'])} "
+                  "joint names match, so no exact joint and observation mapping exists.</p>")
+    body = (f"<h2>Isaac Lab track: same task idea, Isaac Sim + RSL-RL</h2>"
+            f"<p>Isaac Sim {e(tr['isaac_sim'])} and Isaac Lab {e(tr['isaac_lab'])} installed on this host; "
+            f"<code>{e(tr['task'])}</code> trained with RSL-RL PPO, {e(tr['num_envs'])} parallel envs, "
+            f"{tr['iterations_completed']} iterations, {tr['final_step']:,} env steps, {tr['wall_clock_s'] / 60:.0f} minutes, "
+            f"final mean training episode length {last.get('mean_episode_length', 0):.0f} of 1000 steps.</p>"
+            f"<p class=note>Evaluation {e(ev['label'] if ev else 'within Isaac Sim (PhysX), not sim-to-sim')}; "
+            f"{e(ev['episodes_per_condition']) if ev else 0} episodes of 20 s per condition. "
+            "Different robot model, fall definition and command ranges than the MuJoCo table above, so compare within this table only.</p>"
+            f"{table}{mp_txt}")
+    return fig, body, "<li>Isaac Lab results are measured inside Isaac Sim, where the policy was trained; they are not a transfer test.</li>"
+
+
 def main() -> None:
     if OUT.exists():
         shutil.rmtree(OUT)
@@ -60,6 +109,12 @@ def main() -> None:
         poster = OUT / "media" / fname.replace(".mp4", ".jpg")
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "0.1" if "rsl" in fname else "4", "-i",
                         str(ROOT / "media" / fname), "-frames:v", "1", "-q:v", "4", str(poster)], check=True)
+
+    isaac_fig, isaac_body, isaac_limit = isaac_section()
+    if isaac_fig:
+        shutil.copy2(ROOT / "media" / "isaac_g1_flat.mp4", OUT / "media" / "isaac_g1_flat.mp4")
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "4", "-i", str(ROOT / "media" / "isaac_g1_flat.mp4"),
+                        "-frames:v", "1", "-q:v", "4", str(OUT / "media" / "isaac_g1_flat.jpg")], check=True)
 
     train = load("train_brax_dr.json")
     s2s = {p: load(f"sim2sim_{p}.json") for p, _ in POLICIES}
@@ -134,13 +189,14 @@ exported to ONNX and tested sim-to-sim in plain CPU MuJoCo on 500 seeded episode
 <span class=badge>{e(HARDWARE_LABEL)}</span><span class=badge>sim-to-sim, not sim-to-real</span><span class=badge>every number from results/*.json</span>
 <p><a class=btn href="{GITHUB}">Code on GitHub</a><a href="{GITHUB}/blob/main/docs/RESULTS.md">Full results</a></p>
 <div class=cards>{''.join(f'<div class=card><b>{e(a)}</b><span>{e(b)}</span></div>' for a, b in cards)}</div>
-<h2>Videos</h2><div class=vids>{''.join(vids)}</div>
+<h2>Videos</h2><div class=vids>{''.join(vids)}{isaac_fig}</div>
 <h2>Falls in plain CPU MuJoCo (out of 500 episodes, 20 s each)</h2>
 <div class=tw><table><tr><th>condition</th>{head}</tr>{''.join(rows)}</table></div>
 <p class=note>Same seeds (start state, velocity command, pushes) for every policy. Wilson 95% intervals are in the full results.</p>
 <h2>Does domain randomization help? Paired comparison at the same training steps</h2>
 <div class=tw><table><tr><th>condition</th><th>falls, PPO + DR</th><th>falls, PPO no DR</th><th>exact McNemar p</th></tr>{''.join(paired)}</table></div>
 <p class=note>Highlighted rows: p &lt; 0.01. One training seed per policy, so this speaks to these two checkpoints, not to domain randomization in general.</p>
+{isaac_body}
 <h2>How it was built</h2><ul>
 <li>Training: brax PPO, MuJoCo Playground <code>G1JoystickFlatTerrain</code>, 8,192 parallel environments, Playground default config with its domain randomizer.</li>
 <li>Export: static ONNX graph (opset 17), max action difference to the training framework {e(f'{onnx_err:.2g}' if isinstance(onnx_err, float) else onnx_err)}.</li>
@@ -150,7 +206,7 @@ exported to ONNX and tested sim-to-sim in plain CPU MuJoCo on 500 seeded episode
 <li>Simulation only: nothing here has run on a real robot.</li>
 <li>Two control steps of action delay and the harsh push condition break every policy often.</li>
 <li>One training seed per configuration; budgets below the Playground default of 200M steps.</li>
-<li>Isaac Lab was not run on this host (install size); see the repository.</li></ul>
+{isaac_limit}</ul>
 <p class=note>Pavan Yadav Annappa. Model: Unitree G1 from MuJoCo Menagerie (BSD-3-Clause). Code: MIT.</p>
 </main></body></html>
 """

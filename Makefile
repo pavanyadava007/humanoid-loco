@@ -4,7 +4,8 @@ STEPS ?= 100000000
 CAP ?= 125
 EPISODES ?= 500
 
-.PHONY: setup train train-dr train-nodr train-rsl export eval eval-mjx render parity isaac report test lint
+.PHONY: setup train train-dr train-nodr train-rsl export eval eval-mjx render parity isaac report test lint \
+	isaac-setup isaac-train isaac-train-rough isaac-play isaac-eval space
 
 setup:
 	bash scripts/setup_env.sh
@@ -37,6 +38,31 @@ render:
 
 isaac:
 	$(PY) scripts/isaac_lab_check.py
+
+# Isaac Lab track: separate venv, NVIDIA Omniverse EULA accepted through OMNI_KIT_ACCEPT_EULA=YES
+IPY ?= .venv-isaac/bin/python
+ISAAC_ENV = OMNI_KIT_ACCEPT_EULA=YES
+
+isaac-setup:
+	bash scripts/isaac/setup_isaac.sh
+
+isaac-train:
+	$(ISAAC_ENV) $(IPY) scripts/isaac/train_g1.py --headless --task Isaac-Velocity-Flat-G1-v0 --name g1_flat --num_envs 4096 --seed 42 --cap-minutes 115
+
+isaac-train-rough:
+	$(ISAAC_ENV) $(IPY) scripts/isaac/train_g1.py --headless --task Isaac-Velocity-Rough-G1-v0 --name g1_rough --num_envs 4096 --seed 42 --cap-minutes 110
+
+isaac-play:
+	$(ISAAC_ENV) $(IPY) scripts/isaac/play_export.py --headless --enable_cameras --name g1_flat
+	$(PY) scripts/isaac/make_video.py --name g1_flat
+	$(PY) scripts/isaac/compare_models.py --name g1_flat
+
+isaac-eval:
+	$(ISAAC_ENV) $(IPY) scripts/isaac/eval_g1.py --all --name g1_flat --episodes 500
+	$(PY) scripts/isaac/record_install.py
+
+space:
+	$(PY) scripts/build_space.py
 
 report:
 	$(PY) scripts/make_report.py
