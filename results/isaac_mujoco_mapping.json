@@ -1,0 +1,134 @@
+{
+  "meta": {
+    "label": "NVIDIA L4, simulation, no real robot",
+    "gpu": "NVIDIA L4",
+    "host_cpu_count": 32,
+    "python": "3.10.21",
+    "git_rev": "ba71cbd",
+    "written_utc": "2026-09-24T20:41:48+00:00"
+  },
+  "isaac_source": "results/isaac_play_g1_flat.json (robot articulation of Isaac-Velocity-Flat-G1-v0, g1_minimal.usd)",
+  "mujoco_source": "mujoco_playground G1 flat_terrain MJCF (Menagerie unitree_g1), actuator list",
+  "joints": {
+    "isaac_num_joints": 37,
+    "mujoco_num_actuated_joints": 29,
+    "common": [
+      "left_ankle_pitch_joint",
+      "left_ankle_roll_joint",
+      "left_hip_pitch_joint",
+      "left_hip_roll_joint",
+      "left_hip_yaw_joint",
+      "left_knee_joint",
+      "left_shoulder_pitch_joint",
+      "left_shoulder_roll_joint",
+      "left_shoulder_yaw_joint",
+      "right_ankle_pitch_joint",
+      "right_ankle_roll_joint",
+      "right_hip_pitch_joint",
+      "right_hip_roll_joint",
+      "right_hip_yaw_joint",
+      "right_knee_joint",
+      "right_shoulder_pitch_joint",
+      "right_shoulder_roll_joint",
+      "right_shoulder_yaw_joint"
+    ],
+    "isaac_only": [
+      "left_elbow_pitch_joint",
+      "left_elbow_roll_joint",
+      "left_five_joint",
+      "left_four_joint",
+      "left_one_joint",
+      "left_six_joint",
+      "left_three_joint",
+      "left_two_joint",
+      "left_zero_joint",
+      "right_elbow_pitch_joint",
+      "right_elbow_roll_joint",
+      "right_five_joint",
+      "right_four_joint",
+      "right_one_joint",
+      "right_six_joint",
+      "right_three_joint",
+      "right_two_joint",
+      "right_zero_joint",
+      "torso_joint"
+    ],
+    "mujoco_only": [
+      "left_elbow_joint",
+      "left_wrist_pitch_joint",
+      "left_wrist_roll_joint",
+      "left_wrist_yaw_joint",
+      "right_elbow_joint",
+      "right_wrist_pitch_joint",
+      "right_wrist_roll_joint",
+      "right_wrist_yaw_joint",
+      "waist_pitch_joint",
+      "waist_roll_joint",
+      "waist_yaw_joint"
+    ],
+    "same_order_for_common": false,
+    "one_to_one": false
+  },
+  "mujoco_actuator_kp": {
+    "left_hip_pitch_joint": 75.0,
+    "left_hip_roll_joint": 75.0,
+    "left_hip_yaw_joint": 75.0,
+    "left_knee_joint": 75.0,
+    "left_ankle_pitch_joint": 20.0,
+    "left_ankle_roll_joint": 2.0,
+    "right_hip_pitch_joint": 75.0,
+    "right_hip_roll_joint": 75.0,
+    "right_hip_yaw_joint": 75.0,
+    "right_knee_joint": 75.0,
+    "right_ankle_pitch_joint": 20.0,
+    "right_ankle_roll_joint": 2.0,
+    "waist_yaw_joint": 75.0,
+    "waist_roll_joint": 75.0,
+    "waist_pitch_joint": 75.0,
+    "left_shoulder_pitch_joint": 75.0,
+    "left_shoulder_roll_joint": 75.0,
+    "left_shoulder_yaw_joint": 75.0,
+    "left_elbow_joint": 75.0,
+    "left_wrist_roll_joint": 2.0,
+    "left_wrist_pitch_joint": 2.0,
+    "left_wrist_yaw_joint": 2.0,
+    "right_shoulder_pitch_joint": 75.0,
+    "right_shoulder_roll_joint": 75.0,
+    "right_shoulder_yaw_joint": 75.0,
+    "right_elbow_joint": 75.0,
+    "right_wrist_roll_joint": 2.0,
+    "right_wrist_pitch_joint": 2.0,
+    "right_wrist_yaw_joint": 2.0
+  },
+  "isaac_obs_terms": {
+    "base_lin_vel": [
+      3
+    ],
+    "base_ang_vel": [
+      3
+    ],
+    "projected_gravity": [
+      3
+    ],
+    "velocity_commands": [
+      3
+    ],
+    "joint_pos": [
+      37
+    ],
+    "joint_vel": [
+      37
+    ],
+    "actions": [
+      37
+    ]
+  },
+  "isaac_obs_dim": 123,
+  "playground_obs_dim": 103,
+  "exact_mapping_possible": false,
+  "blockers": [
+    "joint sets differ: Isaac Lab G1 has 37 action joints, the Playground/Menagerie G1 has 29 actuators; 19 Isaac joints have no MuJoCo counterpart and 11 MuJoCo joints have no Isaac counterpart",
+    "observation layouts differ: Isaac policy obs 123-dim (base_lin_vel, base_ang_vel, projected_gravity, velocity_commands, joint_pos, joint_vel, actions), Playground actor obs 103-dim (29-joint position, velocity and last-action blocks and a gait-phase term the Isaac task does not have)"
+  ],
+  "decision": "sim-to-sim not attempted"
+}

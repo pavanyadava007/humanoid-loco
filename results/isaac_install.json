@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "label": "NVIDIA L4, simulation, no real robot",
+    "gpu": "NVIDIA L4",
+    "host_cpu_count": 32,
+    "python": "3.10.21",
+    "git_rev": "ba71cbd",
+    "written_utc": "2026-09-24T20:42:17+00:00"
+  },
+  "host_os": "Amazon Linux release 2023.9.20251117 (Amazon Linux)",
+  "glibc": "2.34",
+  "venv": ".venv-isaac (Python 3.10)",
+  "versions": {
+    "isaacsim": "4.5.0.0",
+    "isaaclab": "0.41.3",
+    "isaaclab_tasks": "0.10.36",
+    "isaaclab_rl": "0.1.8",
+    "isaaclab_assets": "0.2.2",
+    "rsl-rl-lib": "2.3.3",
+    "torch": "2.5.1+cu121",
+    "numpy": "1.26.4",
+    "gymnasium": "1.2.0",
+    "warp-lang": "1.17.0",
+    "onnx": "1.16.1",
+    "onnxruntime": "1.19.2"
+  },
+  "isaac_lab_git_tag": "v2.1.1",
+  "install_torch_s": 58.0,
+  "install_isaacsim_s": 112.0,
+  "install_isaaclab_s": 39.0,
+  "df_lines_during_isaacsim_install": [
+    "/dev/nvme0n1p1  360G  302G   59G  84% /",
+    "/dev/nvme0n1p1  360G  307G   54G  86% /",
+    "/dev/nvme0n1p1  360G  316G   45G  88% /"
+  ],
+  "disk_bytes": {
+    ".venv-isaac": 16546427883,
+    "third_party/IsaacLab": 92349529,
+    "logs/isaac": 137707603,
+    "~/.cache/ov (Omniverse runtime cache: downloaded assets, shaders)": 445358779,
+    "~/.cache/uv (hard-links the same files as .venv-isaac, not extra disk)": 16079514046
+  },
+  "note_disk": "du -sb counts apparent size per path; .venv-isaac and the uv cache share hard-linked files, so their sum overstates real use; the filesystem used-space readings during the install are listed below.",
+  "extra_system_package": "mesa-libGLU (dnf), needed by the RTX renderer for camera/video rendering; without it the --enable_cameras run segfaulted after 'libGLU.so.1: cannot open shared object file'",
+  "smoke_test": {
+    "command": "scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Cartpole-v0 --headless --num_envs 1024 --max_iterations 5",
+    "exit_code": 0,
+    "graphics_api": "Vulkan",
+    "iterations_logged": 5,
+    "last_iteration_steps_per_s": 77249
+  },
+  "eula": "Isaac Sim requires accepting the NVIDIA Omniverse EULA; accepted by the repository owner via OMNI_KIT_ACCEPT_EULA=YES"
+}

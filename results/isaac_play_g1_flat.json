@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "label": "NVIDIA L4, simulation, no real robot",
+    "gpu": "NVIDIA L4",
+    "host_cpu_count": 32,
+    "python": "3.10.21",
+    "git_rev": "ba71cbd",
+    "written_utc": "2026-09-24T20:41:40+00:00"
+  },
+  "task": "Isaac-Velocity-Flat-G1-Play-v0",
+  "checkpoint": "logs/isaac/runs/g1_flat/model_1499.pt",
+  "checkpoint_iteration": 1499,
+  "exported": {
+    "policy_pt": "checkpoints/isaac_g1_flat/policy.pt",
+    "policy_onnx": "checkpoints/isaac_g1_flat/policy.onnx",
+    "onnx_opset": 11,
+    "exporter": "isaaclab_rl.rsl_rl.export_policy_as_jit / export_policy_as_onnx (Isaac Lab)"
+  },
+  "parity": {
+    "n_obs": 800,
+    "max_abs_err_onnx_vs_actor": 2.1457672119140625e-06,
+    "max_abs_err_jit_vs_actor": 9.5367431640625e-07,
+    "reference": "RSL-RL actor mean (runner.get_inference_policy) on observations from the rollout"
+  },
+  "video": {
+    "raw_file": "logs/isaac/video/g1_flat/rl-video-step-0.mp4",
+    "steps": 500,
+    "policy_dt_s": 0.02,
+    "command_vx_vy_wz": [
+      0.8,
+      0.0,
+      0.0
+    ],
+    "env0_fell": false,
+    "env0_path_length_m": 6.326997142576147,
+    "env0_net_displacement_m": 6.30513334274292,
+    "env0_base_height_min_m": 0.6108312010765076,
+    "note": "Isaac Lab Play config: no pushes, no observation noise; camera follows env 0"
+  },
+  "model": {
+    "joint_names": [
+      "left_hip_pitch_joint",
+      "right_hip_pitch_joint",
+      "torso_joint",
+      "left_hip_roll_joint",
+      "right_hip_roll_joint",
+      "left_shoulder_pitch_joint",
+      "right_shoulder_pitch_joint",
+      "left_hip_yaw_joint",
+      "right_hip_yaw_joint",
+      "left_shoulder_roll_joint",
+      "right_shoulder_roll_joint",
+      "left_knee_joint",
+      "right_knee_joint",
+      "left_shoulder_yaw_joint",
+      "right_shoulder_yaw_joint",
+      "left_ankle_pitch_joint",
+      "right_ankle_pitch_joint",
+      "left_elbow_pitch_joint",
+      "right_elbow_pitch_joint",
+      "left_ankle_roll_joint",
+      "right_ankle_roll_joint",
+      "left_elbow_roll_joint",
+      "right_elbow_roll_joint",
+      "left_five_joint",
+      "left_three_joint",
+      "left_zero_joint",
+      "right_five_joint",
+      "right_three_joint",
+      "right_zero_joint",
+      "left_six_joint",
+      "left_four_joint",
+      "left_one_joint",
+      "right_six_joint",
+      "right_four_joint",
+      "right_one_joint",
+      "left_two_joint",
+      "right_two_joint"
+    ],
+    "num_joints": 37,
+    "obs_terms": {
+      "base_lin_vel": [
+        3
+      ],
+      "base_ang_vel": [
+        3
+      ],
+      "projected_gravity": [
+        3
+      ],
+      "velocity_commands": [
+        3
+      ],
+      "joint_pos": [
+        37
+      ],
+      "joint_vel": [
+        37
+      ],
+      "actions": [
+        37
+      ]
+    },
+    "default_joint_pos": [
+      -0.20000000298023224,
+      -0.20000000298023224,
+      0.0,
+      0.0,
+      0.0,
+      0.3499999940395355,
+      0.3499999940395355,
+      0.0,
+      0.0,
+      0.1599999964237213,
+      -0.1599999964237213,
+      0.41999998688697815,
+      0.41999998688697815,
+      0.0,
+      0.0,
+      -0.23000000417232513,
+      -0.23000000417232513,
+      0.8700000047683716,
+      0.8700000047683716,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      -1.0,
+      0.5199999809265137,
+      -0.5199999809265137
+    ]
+  }
+}
