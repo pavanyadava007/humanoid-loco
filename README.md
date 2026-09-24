@@ -1,4 +1,4 @@
-# humanoid-loco: Unitree G1 velocity-tracking locomotion, MJX training, CPU MuJoCo sim-to-sim evaluation
+# humanoid-loco: Unitree G1 velocity-tracking locomotion, MJX and Isaac Lab training, CPU MuJoCo sim-to-sim evaluation
 
 **Everything here is NVIDIA L4, simulation, no real robot.** Transfer between simulators is called
 sim-to-sim (MJX to CPU MuJoCo). Nothing in this repository has been run on hardware.
@@ -9,7 +9,8 @@ sim-to-sim (MJX to CPU MuJoCo). Nothing in this repository has been run on hardw
 
 Videos in this repo: [PPO + DR in CPU MuJoCo](media/brax_dr_mujoco_cpu.mp4) |
 [PPO + DR in MJX](media/brax_dr_mjx.mp4) | [no-DR ablation](media/brax_nodr_mujoco_cpu.mp4) |
-[failed RSL-RL run](media/rsl_dr_mujoco_cpu.mp4)
+[failed RSL-RL run](media/rsl_dr_mujoco_cpu.mp4) |
+[Isaac Lab RSL-RL G1 in Isaac Sim](media/isaac_g1_flat.mp4)
 
 What this project does:
 
@@ -27,7 +28,11 @@ What this project does:
    on the same G1 model, 500 seeded episodes per condition: nominal, floor friction x0.5 / x1.5, torso mass +/-3 kg,
    random pushes, 1 and 2 control-step action latency, training-level sensor noise, and a more accurate solver.
    Reports fall rate with Wilson 95% intervals, survival time and velocity-tracking error.
-6. Checks (without installing it) whether Isaac Lab / Isaac Sim could run on this host: see `docs/ISAAC_LAB.md`.
+6. **Isaac Lab track:** installs NVIDIA Isaac Sim 4.5 + Isaac Lab v2.1.1 on the same host, trains Isaac Lab's registered
+   Unitree G1 velocity task (`Isaac-Velocity-Flat-G1-v0`, and `Isaac-Velocity-Rough-G1-v0` as a second run) with RSL-RL PPO,
+   exports the policy (TorchScript + ONNX), records a headless video and evaluates it under the same kinds of perturbations
+   **within Isaac Sim (PhysX), not sim-to-sim**. Isaac to MuJoCo sim-to-sim was not attempted: the Isaac Lab G1 (with hands, different
+   waist and arm joints) and the Menagerie G1 have no exact joint mapping. See [`docs/ISAAC_LAB.md`](docs/ISAAC_LAB.md).
 
 ## Headline results
 
@@ -40,6 +45,13 @@ _Generated from results/*.json by scripts/make_report.py. NVIDIA L4, simulation,
 | brax PPO + DR, step-matched | 75,694,080 | 67.7% | 0.8% [0.3, 2.0] | 0.251 | action_delay_2steps (100.0%) |
 | brax PPO, no DR | 75,694,080 | 69.2% | 0.6% [0.2, 1.7] | 0.154 | action_delay_2steps (100.0%) |
 | RSL-RL PPO + DR | 86,704,128 | 100.0% | 100.0% [99.2, 100.0] | 1.924 | nominal (100.0%) |
+
+Isaac Lab track (within Isaac Sim (PhysX), not sim-to-sim):
+
+| Isaac Lab policy | task | env steps | training wall clock | nominal fall rate [Wilson 95%] | nominal lin-vel err (m/s) | worst condition (fall rate) |
+|---|---|---|---|---|---|---|
+| RSL-RL PPO (g1_flat) | Isaac-Velocity-Flat-G1-v0 | 147,456,000 | 0h48m | 0.0% [0.0, 0.8] (n=500) | 0.121 | action_delay_2steps (95.4%) |
+| RSL-RL PPO (g1_rough) | Isaac-Velocity-Rough-G1-v0 | 266,403,840 | 1h50m | 0.8% [0.3, 2.0] (n=500) | 0.108 | action_delay_2steps (86.4%) |
 <!-- RESULTS:END -->
 
 Qualitative summary (numbers in the table above and in docs/RESULTS.md): both brax policies walk and transfer to
@@ -76,7 +88,8 @@ bash scripts/setup_env.sh                 # uv venv (Python 3.10) + pinned requi
 make train                                # brax PPO with DR, brax PPO without DR, RSL-RL PPO (see Makefile for budgets)
 make eval                                 # ONNX export + parity, MJX common eval, CPU MuJoCo sim-to-sim (100 episodes/condition)
 make render                               # media/*.mp4
-make isaac                                # Isaac Lab feasibility check (index + HEAD requests, no install)
+make isaac-setup                          # separate .venv-isaac: Isaac Sim 4.5 wheels + Isaac Lab v2.1.1 (disk use in docs/ISAAC_LAB.md)
+make isaac-train isaac-play isaac-eval    # Isaac Lab G1 flat: RSL-RL training, export + video, eval within Isaac Sim
 make report                               # docs/RESULTS.md, docs/ISAAC_LAB.md, README table
 make test && make lint                    # pytest (obs parity, ONNX parity, eval determinism) and ruff
 ```
@@ -89,7 +102,9 @@ Budgets are recorded inside each `results/train_*.json` (`requested_num_timestep
 ```
 hloco/           observation/actuation re-implementation for CPU MuJoCo, ONNX builder, param export, stats
 scripts/         train_brax.py, train_rsl_rl.py, export_onnx.py, eval_mjx.py, eval_sim2sim.py, check_parity.py,
-                 render.py, isaac_lab_check.py, make_report.py, setup_env.sh
+                 render.py, isaac_lab_check.py, make_report.py, build_space.py, setup_env.sh
+scripts/isaac/   setup_isaac.sh, train_g1.py, play_export.py, make_video.py, eval_g1.py, compare_models.py,
+                 record_install.py (Isaac Lab track; run in .venv-isaac except make_video/compare/record)
 tests/           obs parity (MJX vs MuJoCo), ONNX vs framework parity, eval determinism
 results/         every measured number, as JSON with provenance (GPU, git revision, UTC time)
 checkpoints/     final actor parameters (params.pkl / policy.pkl, model.pt) and policy.onnx per run
@@ -100,9 +115,10 @@ docs/            RESULTS.md and ISAAC_LAB.md (generated)
 ## Limitations
 
 - **No real robot.** Nothing was run on a physical G1; there is no sim-to-real claim of any kind.
-- **No Isaac Lab.** The feasibility check in `docs/ISAAC_LAB.md` (index listing and HEAD requests only) found that the
-  `isaacsim[all,extscache]==4.5.0.0` pip install (size measured in the doc) exceeds the 2 GB download cap set for this project and that Amazon Linux 2023
-  is not a listed Isaac Sim OS, so Isaac Sim / Isaac Lab were not installed and no Isaac Lab run exists.
+- **Isaac Lab numbers are not a transfer test.** The Isaac-trained policy is evaluated inside Isaac Sim, the simulator it
+  was trained in, on Isaac Lab's own G1 model (with hands; joint lists compared in docs/ISAAC_LAB.md), which differs from the
+  Menagerie G1 used by the MuJoCo track. Fall definitions and command ranges also differ, so the two tracks' tables are not comparable
+  row by row. Amazon Linux 2023 is not an Isaac Sim supported OS; the workarounds used are listed in docs/ISAAC_LAB.md.
 - Sim-to-sim here means MJX (JAX implementation, float32) to CPU MuJoCo (float64) with the same MJCF. Both share
   the same simplified collision model (explicit contact pairs only: feet-floor, foot-foot, hand-thigh), actuator model and solver options, so passing this
   evaluation is not evidence about transfer to hardware.
