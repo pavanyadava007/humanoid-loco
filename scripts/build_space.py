@@ -89,16 +89,22 @@ def isaac_section() -> tuple[str, str, str]:
     isaac_labels = dict(CONDITIONS)
     isaac_labels.update({"friction_x0.5": "robot contact friction x0.5", "friction_x1.5": "robot contact friction x1.5",
                          "pushes": "random pushes (none in training)"})
+    def cell(ev_, c):
+        s_ = ev_["summary"].get(c) if ev_ else None
+        if s_ is None:
+            return "<td>n/a</td>"
+        return (f"<td>{s_['falls']}/{s_['episodes']}<span class=ci>{pct(s_['fall_rate'])} "
+                f"[{pct(s_['fall_rate_wilson95'][0])}, {pct(s_['fall_rate_wilson95'][1])}]</span>"
+                f"<br><span class=ci>lin-vel err {s_['lin_vel_err_mean']:.3f} m/s</span></td>")
+
     if ev:
         for c, lbl in isaac_labels.items():
-            s_ = ev["summary"].get(c)
-            if s_ is None:
+            if c not in ev["summary"] and not (evr and c in evr["summary"]):
                 continue
-            rows.append(f"<tr><td>{e(lbl)}</td><td>{s_['falls']}/{s_['episodes']}<span class=ci>{pct(s_['fall_rate'])} "
-                        f"[{pct(s_['fall_rate_wilson95'][0])}, {pct(s_['fall_rate_wilson95'][1])}]</span></td>"
-                        f"<td>{s_['lin_vel_err_mean']:.3f}</td><td>{s_['yaw_rate_err_mean']:.3f}</td></tr>")
-    table = ("<div class=tw><table><tr><th>condition</th><th>falls (Wilson 95%)</th><th>lin-vel error m/s</th>"
-             f"<th>yaw-rate error rad/s</th></tr>{''.join(rows)}</table></div>") if rows else "<p class=note>Evaluation not run.</p>"
+            rows.append(f"<tr><td>{e(lbl)}</td>{cell(ev, c)}{cell(evr, c)}</tr>")
+    rough_h = "rough-terrain policy (terrain mix)" if evr else "rough-terrain policy (not evaluated)"
+    table = (f"<div class=tw><table><tr><th>condition</th><th>flat policy: falls (Wilson 95%)</th><th>{rough_h}</th></tr>"
+             f"{''.join(rows)}</table></div>") if rows else "<p class=note>Evaluation not run.</p>"
     last = next((r for r in reversed(tr["curve"]) if "mean_episode_length" in r), {})
     mp_txt = ""
     if mp:
