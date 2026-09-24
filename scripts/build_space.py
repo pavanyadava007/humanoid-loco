@@ -60,6 +60,7 @@ def isaac_section() -> tuple[str, str, str]:
     """(video figure html, results html, limits bullet) for the Isaac Lab track, from results/isaac_*.json."""
     tr, ev, vid = load_opt("isaac_train_g1_flat.json"), load_opt("isaac_eval_g1_flat.json"), load_opt("isaac_video_g1_flat.json")
     play, mp = load_opt("isaac_play_g1_flat.json"), load_opt("isaac_mujoco_mapping.json")
+    inst = load_opt("isaac_install.json") or {}
     if tr is None:
         return "", "", "<li>Isaac Lab was not run on this host; see the repository.</li>"
     fig = ""
@@ -71,8 +72,11 @@ def isaac_section() -> tuple[str, str, str]:
                f"{e(v['command_vx_vy_wz'][0])} m/s forward; the camera follows one robot (Isaac Lab G1, {e(play['model']['num_joints'])} joints). "
                "Trained and shown in the same simulator: this is not a transfer test.</figcaption></figure>")
     rows = []
+    isaac_labels = dict(CONDITIONS)
+    isaac_labels.update({"friction_x0.5": "robot contact friction x0.5", "friction_x1.5": "robot contact friction x1.5",
+                         "pushes": "random pushes (none in training)"})
     if ev:
-        for c, lbl in CONDITIONS:
+        for c, lbl in isaac_labels.items():
             s_ = ev["summary"].get(c)
             if s_ is None:
                 continue
@@ -89,7 +93,7 @@ def isaac_section() -> tuple[str, str, str]:
                   f"(with hands), the Menagerie G1 used above has {j['mujoco_num_actuated_joints']} actuators, and only {len(j['common'])} "
                   "joint names match, so no exact joint and observation mapping exists.</p>")
     body = (f"<h2>Isaac Lab track: same task idea, Isaac Sim + RSL-RL</h2>"
-            f"<p>Isaac Sim {e(tr['isaac_sim'])} and Isaac Lab {e(tr['isaac_lab'])} installed on this host; "
+            f"<p>Isaac Sim {e(tr['isaac_sim'])} and Isaac Lab {e(inst.get('isaac_lab_git_tag', tr['isaac_lab']))} installed on this host; "
             f"<code>{e(tr['task'])}</code> trained with RSL-RL PPO, {e(tr['num_envs'])} parallel envs, "
             f"{tr['iterations_completed']} iterations, {tr['final_step']:,} env steps, {tr['wall_clock_s'] / 60:.0f} minutes, "
             f"final mean training episode length {last.get('mean_episode_length', 0):.0f} of 1000 steps.</p>"

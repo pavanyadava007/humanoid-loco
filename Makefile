@@ -5,7 +5,7 @@ CAP ?= 125
 EPISODES ?= 500
 
 .PHONY: setup train train-dr train-nodr train-rsl export eval eval-mjx render parity isaac report test lint \
-	isaac-setup isaac-train isaac-train-rough isaac-play isaac-eval space
+	isaac-setup isaac-train isaac-train-rough isaac-play isaac-play-rough isaac-eval isaac-eval-rough space
 
 setup:
 	bash scripts/setup_env.sh
@@ -60,6 +60,13 @@ isaac-play:
 isaac-eval:
 	$(ISAAC_ENV) $(IPY) scripts/isaac/eval_g1.py --all --name g1_flat --episodes 500
 	$(PY) scripts/isaac/record_install.py
+
+isaac-play-rough:
+	$(ISAAC_ENV) $(IPY) scripts/isaac/play_export.py --headless --enable_cameras --task Isaac-Velocity-Rough-G1-Play-v0 --name g1_rough
+	$(PY) scripts/isaac/make_video.py --name g1_rough
+
+isaac-eval-rough:
+	$(ISAAC_ENV) $(IPY) scripts/isaac/eval_g1.py --all --name g1_rough --task Isaac-Velocity-Rough-G1-v0 --policy checkpoints/isaac_g1_rough/policy.pt --episodes 500
 
 space:
 	$(PY) scripts/build_space.py

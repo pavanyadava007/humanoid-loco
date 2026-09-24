@@ -296,6 +296,10 @@ def isaac_eval_rows() -> list[str]:
                        f"{f(s['survival_s_mean'], 1)} | {s['ended_low_count']} |")
         for c, msg in ev.get("failed_conditions", {}).items():
             out.append(f"| {c} | failed: {msg} | | | | | |")
+        if "Rough" in task:
+            out += ["", "Rough terrain: robots start on the task's generated terrain (curriculum levels of the training config), "
+                    "so the last column (base height in world z) is not meaningful here; friction and mass conditions "
+                    "change the robot, not the terrain."]
         out.append("")
     return out or ["_Isaac Lab evaluation not run_"]
 
@@ -402,8 +406,12 @@ def isaac_doc() -> str | None:
         "constraint that keeps torch 2.5.1+cu121.",
         "- `flatdict==4.0.1` failed to build (`ModuleNotFoundError: No module named 'pkg_resources'` in an isolated build "
         "env with a new setuptools); fixed by installing setuptools<80 and building flatdict without build isolation.",
-        f"- {inst['extra_system_package']}.",
+        f"- System package installed outside the venv with `sudo dnf install -y mesa-libGLU`: {inst['extra_system_package']}.",
         "- Isaac Lab's ONNX exporter writes a static batch of 1, so the ONNX parity check runs one observation at a time.",
+        "- A Kit process from a failed export test (it ignored the SIGTERM sent by `timeout`) stayed alive on the GPU from "
+        "early in the flat training until the first hour of the rough training had passed, and was then killed with SIGKILL. "
+        "The flat training throughput, the flat evaluation and part of the rough training were measured with it present; "
+        "Kit processes should be run under `timeout -s KILL`.",
         "",
         "## Results",
         "",
