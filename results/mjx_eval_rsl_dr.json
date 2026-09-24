@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "label": "NVIDIA L4, simulation, no real robot",
+    "gpu": "NVIDIA L4",
+    "host_cpu_count": 32,
+    "python": "3.10.21",
+    "git_rev": "b3fadb9",
+    "written_utc": "2026-09-24T06:01:00+00:00"
+  },
+  "policy": "rsl_dr",
+  "checkpoint_step": 86704128,
+  "device": "cuda:0",
+  "eval_seed": 2024,
+  "protocol": "MJX training env (obs noise and pushes as in training), deterministic actor, return = sum of env reward until termination or 1000 steps; commands resampled by the env",
+  "with_dr": {
+    "envs": 1024,
+    "episode_steps": 1000,
+    "mean_return": -1.4156885499833152,
+    "return_ci95": [
+      -1.4494510843071517,
+      -1.3819260156594786
+    ],
+    "falls": 1024,
+    "fall_rate": 1.0,
+    "fall_rate_wilson95": [
+      0.9962625959599825,
+      1.0
+    ],
+    "mean_episode_length_steps": 57.82421875
+  },
+  "without_dr": {
+    "envs": 1024,
+    "episode_steps": 1000,
+    "mean_return": -1.3476230688393116,
+    "return_ci95": [
+      -1.3782234262655164,
+      -1.3170227114131068
+    ],
+    "falls": 1024,
+    "fall_rate": 1.0,
+    "fall_rate_wilson95": [
+      0.9962625959599825,
+      1.0
+    ],
+    "mean_episode_length_steps": 59.015625
+  }
+}

@@ -105,6 +105,11 @@ def rollout_cpu(policy_name: str, model: mujoco.MjModel, steps: int) -> tuple[li
     return qs, fell
 
 
+def path_length(qs: list[np.ndarray]) -> float:
+    xy = np.stack([q[:2] for q in qs])
+    return float(np.linalg.norm(np.diff(xy, axis=0), axis=1).sum())
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--policy", required=True)
@@ -119,11 +124,13 @@ def main() -> None:
         qs, fell = rollout_mjx(args.policy, steps)
         n = render_qpos(model, qs[::2], MEDIA / f"{args.policy}_mjx.mp4")
         out["videos"]["mjx"] = {"file": f"media/{args.policy}_mjx.mp4", "frames": n, "fell": fell,
+                                "base_xy_path_length_m": path_length(qs),
                                 "note": "MJX env, deterministic actor in JAX, training obs noise on, pushes disabled"}
     if (CKPT / args.policy / "policy.onnx").exists():
         qs, fell = rollout_cpu(args.policy, model, steps)
         n = render_qpos(model, qs[::2], MEDIA / f"{args.policy}_mujoco_cpu.mp4")
         out["videos"]["mujoco_cpu"] = {"file": f"media/{args.policy}_mujoco_cpu.mp4", "frames": n, "fell": fell,
+                                       "base_xy_path_length_m": path_length(qs),
                                        "note": "plain CPU MuJoCo, ONNX policy, clean obs, no pushes"}
     write_json(RESULTS / f"render_{args.policy}.json", out)
     print(out["videos"])

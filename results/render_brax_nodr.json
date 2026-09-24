@@ -4,8 +4,8 @@
     "gpu": "NVIDIA L4",
     "host_cpu_count": 32,
     "python": "3.10.21",
-    "git_rev": "a2676d3",
-    "written_utc": "2026-09-24T04:49:07+00:00"
+    "git_rev": "b3fadb9",
+    "written_utc": "2026-09-24T05:18:23+00:00"
   },
   "policy": "brax_nodr",
   "schedule_s_vx_vy_yaw": [
@@ -52,12 +52,14 @@
       "file": "media/brax_nodr_mjx.mp4",
       "frames": 301,
       "fell": false,
+      "base_xy_path_length_m": 5.2703752517700195,
       "note": "MJX env, deterministic actor in JAX, training obs noise on, pushes disabled"
     },
     "mujoco_cpu": {
       "file": "media/brax_nodr_mujoco_cpu.mp4",
       "frames": 301,
       "fell": false,
+      "base_xy_path_length_m": 5.138494949408596,
       "note": "plain CPU MuJoCo, ONNX policy, clean obs, no pushes"
     }
   }

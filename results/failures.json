@@ -4,8 +4,8 @@
     "gpu": "NVIDIA L4",
     "host_cpu_count": 32,
     "python": "3.10.21",
-    "git_rev": "a2676d3",
-    "written_utc": "2026-09-24T04:02:02+00:00"
+    "git_rev": "b3fadb9",
+    "written_utc": "2026-09-24T06:01:19+00:00"
   },
   "items": [
     {
@@ -15,6 +15,10 @@
     {
       "what": "JAX GPU matmul in a fresh process (scripts/eval_mjx.py)",
       "error": "XlaRuntimeError INTERNAL: an unsupported value or parameter was passed to the function; worked around by importing torch before jax (see comment in scripts/eval_mjx.py); training processes were not affected"
+    },
+    {
+      "what": "RSL-RL PPO run (results/train_rsl_dr.json)",
+      "error": "trained to the 72 min cap without learning to stand: the final mean training episode length is far below the 1000-step episode, and the exported policy fell in every evaluated episode in both MJX (mjx_eval_rsl_dr.json) and CPU MuJoCo (sim2sim_rsl_dr.json). Not debugged within the time budget; one untested hypothesis is that Playground's rsl_rl_config has no tuned entry for G1JoystickFlatTerrain"
     }
   ]
 }

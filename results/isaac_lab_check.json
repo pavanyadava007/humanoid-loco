@@ -4,14 +4,14 @@
     "gpu": "NVIDIA L4",
     "host_cpu_count": 32,
     "python": "3.10.21",
-    "git_rev": "uncommitted",
-    "written_utc": "2026-09-24T01:31:02+00:00"
+    "git_rev": "b3fadb9",
+    "written_utc": "2026-09-24T05:21:44+00:00"
   },
   "host_os": "Amazon Linux 2023.9.20251117",
   "host_glibc": "2.34",
   "host_python": "3.10.21",
   "gpu_and_driver": "NVIDIA L4, 580.95.05",
-  "free_disk_gb": 5.0,
+  "free_disk_gb": 62.9,
   "index": "https://pypi.nvidia.com",
   "packages": {
     "isaacsim": {
@@ -61,14 +61,88 @@
       ]
     }
   },
-  "wheel_bytes_downloaded": 0,
+  "isaacsim_4_5_install": {
+    "isaacsim_version": "4.5.0.0",
+    "extras": [
+      "all",
+      "extscache"
+    ],
+    "wheels": {
+      "isaacsim-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 30238,
+      "isaacsim_utils-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 8663816,
+      "isaacsim_test-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 3322626,
+      "isaacsim_robot-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 20303778,
+      "isaacsim_template-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 851838,
+      "isaacsim_gui-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 20944571,
+      "isaacsim_storage-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 3262197,
+      "isaacsim_kernel-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 19244,
+      "omniverse_kit-106.5.0.162521-cp310-none-manylinux_2_34_x86_64.whl": 52488699,
+      "isaacsim_sensor-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 17405797,
+      "isaacsim_ros2-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 45406155,
+      "isaacsim_ros1-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 36008610,
+      "isaacsim_robot_setup-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 9699694,
+      "isaacsim_robot_motion-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 8788490,
+      "isaacsim_rl-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 17280,
+      "isaacsim_benchmark-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 3318653,
+      "isaacsim_replicator-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 11111156,
+      "isaacsim_example-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 6274974,
+      "isaacsim_cortex-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 3364939,
+      "isaacsim_core-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 20592974,
+      "isaacsim_code_editor-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 7901880,
+      "isaacsim_asset-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 18893384,
+      "isaacsim_app-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 7105265,
+      "isaacsim_extscache_physics-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 248330582,
+      "isaacsim_extscache_kit_sdk-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 1263502494,
+      "isaacsim_extscache_kit-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 2453559947
+    },
+    "total_wheel_bytes": 4271169281,
+    "not_found_on_index": [],
+    "metadata_wheel_bytes_downloaded": 14187015
+  },
+  "isaacsim_4_5_install_without_extscache": {
+    "isaacsim_version": "4.5.0.0",
+    "extras": [
+      "all"
+    ],
+    "wheels": {
+      "isaacsim-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 30238,
+      "isaacsim_utils-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 8663816,
+      "isaacsim_test-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 3322626,
+      "isaacsim_robot-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 20303778,
+      "isaacsim_template-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 851838,
+      "isaacsim_gui-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 20944571,
+      "isaacsim_storage-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 3262197,
+      "isaacsim_kernel-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 19244,
+      "omniverse_kit-106.5.0.162521-cp310-none-manylinux_2_34_x86_64.whl": 52488699,
+      "isaacsim_sensor-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 17405797,
+      "isaacsim_ros2-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 45406155,
+      "isaacsim_ros1-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 36008610,
+      "isaacsim_robot_setup-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 9699694,
+      "isaacsim_robot_motion-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 8788490,
+      "isaacsim_rl-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 17280,
+      "isaacsim_benchmark-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 3318653,
+      "isaacsim_replicator-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 11111156,
+      "isaacsim_example-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 6274974,
+      "isaacsim_cortex-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 3364939,
+      "isaacsim_core-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 20592974,
+      "isaacsim_code_editor-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 7901880,
+      "isaacsim_asset-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 18893384,
+      "isaacsim_app-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl": 7105265
+    },
+    "total_wheel_bytes": 305776258,
+    "not_found_on_index": [],
+    "metadata_wheel_bytes_downloaded": 14187015
+  },
+  "download_cap_bytes": 2147483648,
+  "wheel_bytes_downloaded": 14187015,
   "blockers": [
-    "free disk 5.0 GB, below the 30 GB threshold this check assumes for Isaac Sim + Isaac Lab + shader/extension caches (assumption, not measured); the brief also caps Isaac downloads at 2 GB"
+    "pip install isaacsim[all,extscache]==4.5.0.0 needs 4.3 GB of wheels from the NVIDIA index (sum of HEAD sizes), above the 2 GB download cap set for this check"
   ],
   "notes": [
     "Isaac Sim 4.x wheels are tagged manylinux_2_34 (cp310), so glibc 2.34 alone does not block pip install of 4.x; 5.x/6.x wheels need glibc 2.35. The Isaac Sim documentation lists Ubuntu and Windows as supported OSes; Amazon Linux 2023 is not listed: runtime compatibility on this OS was not tested.",
-    "Only the isaacsim and isaacsim-kernel wheel sizes were measured (HEAD). A full Isaac Sim pip install pulls many more isaacsim-* packages plus extension caches; their total size was not measured here."
+    "The variant without the extscache extras (size recorded separately) was not tried; the extension caches it leaves out would have to come from somewhere else at run time, so it is not a way around the cap that was verified.",
+    "Install size counts only wheels hosted on the NVIDIA index (isaacsim-*, omniverse-kit); PyPI dependencies, Isaac Lab itself and runtime shader/asset caches are not included, so the real footprint is larger."
   ],
-  "verdict": "not feasible on this host",
-  "method": "HTML index listing + HTTP HEAD only; no wheel was downloaded or installed"
+  "verdict": "not run: blocked under this project's constraints",
+  "method": "HTML index listing + HTTP HEAD for sizes; only the small metadata wheels (isaacsim, isaacsim-* meta packages under 5 MB) were downloaded to read their pinned requirements; nothing was installed"
 }

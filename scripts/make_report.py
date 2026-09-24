@@ -183,6 +183,23 @@ def dr_effect_rows(dr_name: str = "brax_dr") -> list[str]:
                    "so it speaks to these two checkpoints, not to DR in general)."]
 
 
+def brax_vs_rsl_rows() -> list[str]:
+    a, r = load("train_brax_dr.json"), load("train_rsl_dr.json")
+    if not a or not r or not r.get("curve"):
+        return ["_needs train_brax_dr.json and train_rsl_dr.json_"]
+    rc = [x for x in r["curve"] if "mean_episode_reward" in x]
+    rows = ["| env steps (brax eval point) | brax DR eval reward / episode length | RSL-RL env steps (nearest) | RSL-RL train reward / episode length |",
+            "|---|---|---|---|"]
+    for p in a["curve"]:
+        if p["step"] == 0 or p["step"] > rc[-1]["step"]:
+            continue
+        q = min(rc, key=lambda x: abs(x["step"] - p["step"]))
+        rows.append(f"| {p['step']:,} | {f(p.get('episode_reward'), 2)} / {f(p.get('avg_episode_length'), 1)} | "
+                    f"{q['step']:,} | {f(q['mean_episode_reward'], 2)} / {f(q['mean_episode_length'], 1)} |")
+    return rows + ["", "Episode length is in control steps (1000 = full 20 s episode). The reward columns use different "
+                   "estimators (see above); episode length is the more comparable column (both count control steps from the env reset distribution until termination or 1000 steps)."]
+
+
 def scheduling_rows() -> list[str]:
     """Why the no-DR and RSL-RL runs were run one after the other (numbers from the run JSONs)."""
     dr, nodr, att = load("train_brax_dr.json"), load("train_brax_nodr.json"), load("train_rsl_dr_parallel_attempt.json")
@@ -192,7 +209,13 @@ def scheduling_rows() -> list[str]:
     brax_par = (c1["step"] - c0["step"]) / (c1["wall_s"] - c0["wall_s"])
     pts = [r for r in att["curve"] if c0["wall_s"] <= r["wall_s"] <= c1["wall_s"]]
     rsl_par = (pts[-1]["step"] - pts[0]["step"]) / (pts[-1]["wall_s"] - pts[0]["wall_s"]) if len(pts) >= 2 else None
-    rows = [
+    probe = load("throughput_probe.json")
+    rows = []
+    if probe:
+        rows.append(f"- Budget probe before the main runs: brax PPO with DR, {probe['final_step']:,} env steps, steady "
+                    f"{f(probe['env_steps_per_s_steady'], 0)} env steps/s (`results/throughput_probe.json`); the 130M-step "
+                    "budget was chosen from this rate to fit the 2 h cap.")
+    rows += [
         f"- brax PPO alone on the L4 (DR run, steady): {f(dr['env_steps_per_s_steady'], 0)} env steps/s (`results/train_brax_dr.json`).",
         f"- brax PPO (no-DR run) while the RSL-RL job ran on the same GPU: {f(brax_par, 0)} env steps/s "
         f"(first two eval points of `results/train_brax_nodr.json`).",
@@ -222,8 +245,8 @@ def isaac_doc() -> str | None:
         "(written by `python scripts/isaac_lab_check.py`). Do not edit by hand.",
         "",
         "Isaac Lab runs on top of NVIDIA Isaac Sim. The check only reads the NVIDIA pip index "
-        f"({r['index']}) and sends HTTP HEAD requests; it downloads and installs nothing "
-        f"(wheel bytes downloaded: {r['wheel_bytes_downloaded']}).",
+        f"({r['index']}), sends HTTP HEAD requests for wheel sizes and downloads only small meta wheels to read their "
+        f"pinned requirements ({r['wheel_bytes_downloaded'] / 1e6:.1f} MB in total); it installs nothing.",
         "",
         "## Host",
         "",
@@ -247,6 +270,18 @@ def isaac_doc() -> str | None:
         lines.append(f"| {pkg} | {', '.join(info['manylinux_glibc_tags'])} | {', '.join(info['python_tags'])} | "
                      f"{info['newest_host_installable_wheel']} | {mb(info['newest_host_installable_wheel_bytes_HEAD'])} | "
                      f"{info['latest_wheel']} | {mb(info['latest_wheel_bytes_HEAD'])} |")
+    inst = r.get("isaacsim_4_5_install", {})
+    if "total_wheel_bytes" in inst:
+        lines += ["", f"## Download size of `pip install isaacsim[{','.join(inst['extras'])}]=={inst['isaacsim_version']}`", "",
+                  f"Sum of HEAD sizes of the {len(inst['wheels'])} wheels hosted on the NVIDIA index: "
+                  f"**{inst['total_wheel_bytes'] / 1e9:.2f} GB** (to read pinned requirements, "
+                  f"{inst['metadata_wheel_bytes_downloaded'] / 1e6:.1f} MB of small meta wheels were downloaded). Largest wheels:", "",
+                  "| wheel | size |", "|---|---|"]
+        for name, size in sorted(inst["wheels"].items(), key=lambda kv: -(kv[1] or 0))[:5]:
+            lines.append(f"| {name} | {mb(size)} |")
+        ne = r.get("isaacsim_4_5_install_without_extscache", {})
+        if "total_wheel_bytes" in ne:
+            lines += ["", f"Without the `extscache` extras: {ne['total_wheel_bytes'] / 1e9:.2f} GB over {len(ne['wheels'])} wheels."]
     lines += ["", f"## Verdict: {r['verdict']}", ""]
     lines += [f"- Blocker: {b}" for b in r["blockers"]] or ["- No blocker found."]
     lines += [""] + [f"- Note: {n}" for n in r.get("notes", [])]
@@ -262,7 +297,9 @@ def render_rows() -> list[str]:
         if not r:
             continue
         for k, v in r["videos"].items():
-            rows.append(f"- {lab}, {k}: `{v['file']}` ({v['frames']} frames, fell: {v['fell']}; {v['note']})")
+            dist = v.get("base_xy_path_length_m")
+            dtxt = f", base travelled {dist:.2f} m" if dist is not None else ""
+            rows.append(f"- {lab}, {k}: `{v['file']}` ({v['frames']} frames at 25 fps, fell: {v['fell']}{dtxt}; {v['note']})")
     return rows or ["_no videos rendered_"]
 
 
@@ -329,11 +366,17 @@ def main() -> None:
     for n, _ in TRAIN_RUNS:
         parts += curve_table(n) + [""]
     parts += ["### DR vs no-DR at matched env steps (brax in-loop eval reward)", "", *matched_curve_rows(), ""]
+    parts += ["### brax PPO vs RSL-RL PPO at similar env steps (both with DR)", "", *brax_vs_rsl_rows(), ""]
     parts += ["### GPU scheduling (parallel vs sequential)", "", *scheduling_rows(), ""]
     parts += [
         "## Common MJX evaluation (all policies, same protocol)",
         "",
         *mjx_table(),
+        "",
+        "The MJX protocol keeps everything the training env does: velocity-kick pushes every 5 to 10 s, training-level "
+        "sensor noise, and a new random command every 10 s. The CPU MuJoCo `nominal` condition below has no pushes, clean "
+        "observations and one constant command, so MJX fall rates are not comparable to CPU MuJoCo `nominal` fall rates; "
+        "compare policies within one table.",
         "",
         "## Parity checks",
         "",

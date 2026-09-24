@@ -1,8 +1,9 @@
 """Isaac Lab / Isaac Sim feasibility check on this host, without downloading Isaac Sim.
 
 Reads the NVIDIA pip index listings (HTML only) to find which platform tags the isaacsim
-wheels are built for, asks the server for wheel sizes with HEAD requests, and compares
-with the host glibc, Python and free disk. Writes results/isaac_lab_check.json.
+wheels are built for, asks the server for wheel sizes with HEAD requests (and reads the
+pinned requirements of the small isaacsim meta wheels), and compares with the host glibc,
+Python, free disk and the 2 GB download cap. Writes results/isaac_lab_check.json.
 """
 
 from __future__ import annotations
@@ -42,6 +43,68 @@ def head_size(url: str) -> int | None:
             return int(n)
     except Exception:  # noqa: BLE001
         return None
+
+
+def wheel_url(pkg: str, version: str) -> tuple[str, str] | None:
+    """Linux x86_64 (or pure python) wheel of pkg==version on the NVIDIA index."""
+    stem = pkg.replace("-", "_")
+    for name, url in listing(pkg):
+        if name.startswith(f"{stem}-{version}-") and ("manylinux" in name and "x86_64" in name or "none-any" in name):
+            if "cp310" in name or "py3" in name:
+                return name, url
+    return None
+
+
+def requires(url: str, extras: tuple[str, ...], max_bytes: int = 5_000_000) -> tuple[list[tuple[str, str]], int]:
+    """Pinned requirements (name, version) of a small metadata-only wheel; returns (deps, bytes downloaded)."""
+    import io
+    import zipfile
+
+    size = head_size(url)
+    if size is None or size > max_bytes:
+        return [], 0
+    blob = urllib.request.urlopen(url, timeout=120).read()
+    zf = zipfile.ZipFile(io.BytesIO(blob))
+    meta = next(n for n in zf.namelist() if n.endswith(".dist-info/METADATA"))
+    deps = []
+    for line in zf.read(meta).decode().splitlines():
+        if not line.startswith("Requires-Dist:"):
+            continue
+        spec = line.split(":", 1)[1].strip()
+        req, _, marker = spec.partition(";")
+        if marker and not any(f'extra == "{e}"' in marker for e in extras):
+            continue
+        if "==" in req:
+            name, ver = req.split("==")
+            deps.append((name.strip(), ver.strip()))
+    return deps, len(blob)
+
+
+def install_size(version: str = "4.5.0.0", extras: tuple[str, ...] = ("all", "extscache")) -> dict:
+    """Sum of wheel sizes (HTTP HEAD) for `pip install isaacsim[all,extscache]==version`, NVIDIA-index packages only."""
+    seen, sizes, missing, meta_bytes = set(), {}, [], 0
+    queue = [("isaacsim", version)]
+    while queue:
+        pkg, ver = queue.pop()
+        if pkg in seen:
+            continue
+        seen.add(pkg)
+        try:
+            w = wheel_url(pkg, ver)
+        except Exception:  # noqa: BLE001  (not on this index)
+            w = None
+        if w is None:
+            missing.append(f"{pkg}=={ver}")
+            continue
+        sizes[w[0]] = head_size(w[1])
+        if pkg.startswith("isaacsim"):
+            deps, nb = requires(w[1], extras if pkg == "isaacsim" else ())
+            meta_bytes += nb
+            queue += deps
+    total = sum(v for v in sizes.values() if v)
+    return {"isaacsim_version": version, "extras": list(extras), "wheels": sizes,
+            "total_wheel_bytes": total, "not_found_on_index": missing,
+            "metadata_wheel_bytes_downloaded": meta_bytes}
 
 
 def glibc_tag(name: str) -> tuple[int, int] | None:
@@ -85,7 +148,19 @@ def main() -> None:
             "python_tags": sorted({n.split("-")[2] for n, _ in wheels}),
         }
 
+    try:
+        inst45 = install_size()
+    except Exception as e:  # noqa: BLE001
+        inst45 = {"error": f"{type(e).__name__}: {e}"}
+    try:
+        inst45_noext = install_size(extras=("all",))
+    except Exception as e:  # noqa: BLE001
+        inst45_noext = {"error": f"{type(e).__name__}: {e}"}
+    cap = 2 * 1024**3
     blockers = []
+    if "total_wheel_bytes" in inst45 and inst45["total_wheel_bytes"] > cap:
+        blockers.append(f"pip install isaacsim[all,extscache]==4.5.0.0 needs {inst45['total_wheel_bytes'] / 1e9:.1f} GB of wheels "
+                        "from the NVIDIA index (sum of HEAD sizes), above the 2 GB download cap set for this check")
     for pkg, info in pkgs.items():
         if "error" in info:
             blockers.append(f"{pkg}: index not reachable ({info['error']})")
@@ -100,10 +175,12 @@ def main() -> None:
         "Isaac Sim 4.x wheels are tagged manylinux_2_34 (cp310), so glibc 2.34 alone does not block pip install of 4.x; "
         "5.x/6.x wheels need glibc 2.35. The Isaac Sim documentation lists Ubuntu and Windows as supported OSes; Amazon Linux 2023 is not listed: "
         "runtime compatibility on this OS was not tested.",
-        "Only the isaacsim and isaacsim-kernel wheel sizes were measured (HEAD). A full Isaac Sim pip install pulls many "
-        "more isaacsim-* packages plus extension caches; their total size was not measured here.",
+        "The variant without the extscache extras (size recorded separately) was not tried; the extension caches it "
+        "leaves out would have to come from somewhere else at run time, so it is not a way around the cap that was verified.",
+        "Install size counts only wheels hosted on the NVIDIA index (isaacsim-*, omniverse-kit); PyPI dependencies, "
+        "Isaac Lab itself and runtime shader/asset caches are not included, so the real footprint is larger.",
     ]
-    verdict = "not feasible on this host" if blockers else "no blocker found by this check"
+    verdict = "not run: blocked under this project's constraints" if blockers else "no blocker found by this check"
     write_json(RESULTS / "isaac_lab_check.json", {
         "host_os": pretty,
         "host_glibc": libc[1],
@@ -112,11 +189,15 @@ def main() -> None:
         "free_disk_gb": round(free_gb, 1),
         "index": INDEX,
         "packages": pkgs,
-        "wheel_bytes_downloaded": 0,
+        "isaacsim_4_5_install": inst45,
+        "isaacsim_4_5_install_without_extscache": inst45_noext,
+        "download_cap_bytes": cap,
+        "wheel_bytes_downloaded": inst45.get("metadata_wheel_bytes_downloaded", 0),
         "blockers": blockers,
         "notes": notes,
         "verdict": verdict,
-        "method": "HTML index listing + HTTP HEAD only; no wheel was downloaded or installed",
+        "method": "HTML index listing + HTTP HEAD for sizes; only the small metadata wheels (isaacsim, isaacsim-* "
+                  "meta packages under 5 MB) were downloaded to read their pinned requirements; nothing was installed",
     })
     print(verdict)
     for b in blockers:

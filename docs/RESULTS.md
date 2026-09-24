@@ -10,6 +10,7 @@ Transfer between simulators is sim-to-sim (MJX to CPU MuJoCo), not sim-to-real.
 | brax PPO + DR | 130,744,320 | 48.2% | 0.0% [0.0, 0.8] | 0.154 | action_delay_2steps (98.2%) |
 | brax PPO + DR, step-matched | 75,694,080 | 67.7% | 0.8% [0.3, 2.0] | 0.251 | action_delay_2steps (100.0%) |
 | brax PPO, no DR | 75,694,080 | 69.2% | 0.6% [0.2, 1.7] | 0.154 | action_delay_2steps (100.0%) |
+| RSL-RL PPO + DR | 86,704,128 | 100.0% | 100.0% [99.2, 100.0] | 1.924 | nominal (100.0%) |
 
 ## Training runs
 
@@ -17,7 +18,7 @@ Transfer between simulators is sim-to-sim (MJX to CPU MuJoCo), not sim-to-real.
 |---|---|---|---|---|---|---|---|---|
 | brax_dr | brax PPO + DR | yes | 130,744,320 | 1h48m | 20735 | 9.11 (eval) | finished | `results/train_brax_dr.json` |
 | brax_nodr | brax PPO, no DR | no | 75,694,080 | 1h19m | 19838 | 7.92 (eval) | stopped_by_wall_clock_cap | `results/train_brax_nodr.json` |
-| rsl_dr | RSL-RL PPO + DR | yes | 24,674,304 | 0h22m | 18262 | -2.01 (train-episode) | running | `results/train_rsl_dr.json` |
+| rsl_dr | RSL-RL PPO + DR | yes | 86,704,128 | 1h12m | 20184 | -1.83 (train-episode) | stopped_by_wall_clock_cap | `results/train_rsl_dr.json` |
 
 brax reward = `eval/episode_reward` of brax's in-loop evaluator (128 envs, stochastic policy, same env config as training). RSL-RL reward = mean return of the last 100 finished training episodes. The two are not the same estimator; the common MJX evaluation below scores all policies identically.
 
@@ -62,17 +63,17 @@ brax reward = `eval/episode_reward` of brax's in-loop evaluator (128 envs, stoch
 | env steps | wall clock | reward | episode length |
 |---|---|---|---|
 | 98,304 | 0h00m | -3.77 | 22.7 |
-| 2,359,296 | 0h02m | -2.47 | 11.3 |
-| 4,620,288 | 0h04m | -2.16 | 7.2 |
-| 6,782,976 | 0h05m | -2.11 | 8.0 |
-| 9,043,968 | 0h07m | -2.07 | 7.7 |
-| 11,304,960 | 0h10m | -2.09 | 11.7 |
-| 13,565,952 | 0h12m | -2.13 | 16.8 |
+| 7,962,624 | 0h06m | -2.06 | 7.3 |
 | 15,826,944 | 0h14m | -2.14 | 20.2 |
-| 18,087,936 | 0h16m | -2.12 | 23.7 |
-| 20,250,624 | 0h18m | -2.04 | 26.9 |
-| 22,511,616 | 0h20m | -2.06 | 27.7 |
-| 24,674,304 | 0h22m | -2.01 | 27.6 |
+| 23,691,264 | 0h21m | -1.98 | 31.1 |
+| 31,555,584 | 0h28m | -1.94 | 29.0 |
+| 39,419,904 | 0h34m | -1.92 | 32.2 |
+| 47,480,832 | 0h41m | -1.91 | 31.5 |
+| 55,345,152 | 0h47m | -1.88 | 31.2 |
+| 63,209,472 | 0h53m | -1.86 | 34.6 |
+| 71,073,792 | 0h59m | -1.89 | 37.0 |
+| 78,938,112 | 1h05m | -1.85 | 34.2 |
+| 86,704,128 | 1h12m | -1.83 | 38.1 |
 
 ### DR vs no-DR at matched env steps (brax in-loop eval reward)
 
@@ -93,8 +94,28 @@ brax reward = `eval/episode_reward` of brax's in-loop evaluator (128 envs, stoch
 
 Both runs use num_timesteps 130M with 20 evaluation points, so evaluation steps coincide; each run is scored by brax's evaluator in its own training env (the DR run's eval env is randomized, the no-DR run's is nominal).
 
+### brax PPO vs RSL-RL PPO at similar env steps (both with DR)
+
+| env steps (brax eval point) | brax DR eval reward / episode length | RSL-RL env steps (nearest) | RSL-RL train reward / episode length |
+|---|---|---|---|
+| 6,881,280 | -2.91 / 47.6 | 6,782,976 | -2.11 / 8.0 |
+| 13,762,560 | -2.55 / 56.4 | 13,664,256 | -2.08 / 15.2 |
+| 20,643,840 | -2.28 / 61.7 | 20,545,536 | -2.09 / 26.5 |
+| 27,525,120 | -2.16 / 74.3 | 27,426,816 | -1.99 / 31.1 |
+| 34,406,400 | -1.66 / 125.8 | 34,308,096 | -1.95 / 29.3 |
+| 41,287,680 | -0.68 / 230.6 | 41,189,376 | -1.87 / 32.6 |
+| 48,168,960 | 0.01 / 320.9 | 48,070,656 | -1.87 / 32.6 |
+| 55,050,240 | 2.04 / 408.0 | 54,951,936 | -1.86 / 31.1 |
+| 61,931,520 | 2.30 / 439.0 | 61,833,216 | -1.86 / 32.6 |
+| 68,812,800 | 4.23 / 498.1 | 68,714,496 | -1.78 / 37.0 |
+| 75,694,080 | 5.46 / 548.9 | 75,595,776 | -1.88 / 33.1 |
+| 82,575,360 | 4.80 / 493.0 | 82,477,056 | -1.80 / 36.9 |
+
+Episode length is in control steps (1000 = full 20 s episode). The reward columns use different estimators (see above); episode length is the more comparable column (both count control steps from the env reset distribution until termination or 1000 steps).
+
 ### GPU scheduling (parallel vs sequential)
 
+- Budget probe before the main runs: brax PPO with DR, 6,225,920 env steps, steady 20044 env steps/s (`results/throughput_probe.json`); the 130M-step budget was chosen from this rate to fit the 2 h cap.
 - brax PPO alone on the L4 (DR run, steady): 20735 env steps/s (`results/train_brax_dr.json`).
 - brax PPO (no-DR run) while the RSL-RL job ran on the same GPU: 7862 env steps/s (first two eval points of `results/train_brax_nodr.json`).
 - RSL-RL over the same wall-clock window: 10627 env steps/s (`results/train_rsl_dr_parallel_attempt.json`).
@@ -110,6 +131,10 @@ Both runs use num_timesteps 130M with 20 evaluation points, so evaluation steps 
 | brax PPO + DR, step-matched | MJX nominal | 16.87 [16.30, 17.43] | 63.7% [60.7, 66.6] | 1024 | `results/mjx_eval_brax_dr_matched.json` |
 | brax PPO, no DR | MJX + DR | 15.81 [15.17, 16.44] | 69.2% [66.3, 72.0] | 1024 | `results/mjx_eval_brax_nodr.json` |
 | brax PPO, no DR | MJX nominal | 19.51 [18.87, 20.14] | 60.8% [57.8, 63.8] | 1024 | `results/mjx_eval_brax_nodr.json` |
+| RSL-RL PPO + DR | MJX + DR | -1.42 [-1.45, -1.38] | 100.0% [99.6, 100.0] | 1024 | `results/mjx_eval_rsl_dr.json` |
+| RSL-RL PPO + DR | MJX nominal | -1.35 [-1.38, -1.32] | 100.0% [99.6, 100.0] | 1024 | `results/mjx_eval_rsl_dr.json` |
+
+The MJX protocol keeps everything the training env does: velocity-kick pushes every 5 to 10 s, training-level sensor noise, and a new random command every 10 s. The CPU MuJoCo `nominal` condition below has no pushes, clean observations and one constant command, so MJX fall rates are not comparable to CPU MuJoCo `nominal` fall rates; compare policies within one table.
 
 ## Parity checks
 
@@ -118,6 +143,7 @@ Both runs use num_timesteps 130M with 20 evaluation points, so evaluation steps 
 - ONNX (opset 17) vs brax ppo_networks.make_inference_fn(deterministic=True), JAX for brax PPO + DR: max abs action error 8.64e-07 over 2000 observations (`results/onnx_parity_brax_dr.json`).
 - ONNX (opset 17) vs brax ppo_networks.make_inference_fn(deterministic=True), JAX for brax PPO + DR, step-matched: max abs action error 6.56e-07 over 2000 observations (`results/onnx_parity_brax_dr_matched.json`).
 - ONNX (opset 17) vs brax ppo_networks.make_inference_fn(deterministic=True), JAX for brax PPO, no DR: max abs action error 1.16e-06 over 2000 observations (`results/onnx_parity_brax_nodr.json`).
+- ONNX (opset 17) vs RSL-RL checkpoint state_dict evaluated with torch ops for RSL-RL PPO + DR: max abs action error 1.19e-06 over 2000 observations (`results/onnx_parity_rsl_dr.json`).
 
 ## Sim-to-sim: ONNX policy in plain CPU MuJoCo
 
@@ -125,37 +151,37 @@ Fall = Playground G1 termination (torso up-vector z < 0, foot-foot or foot-shin 
 
 ### Fall rate
 
-| condition | brax PPO + DR: fall rate [Wilson 95%] | brax PPO + DR, step-matched: fall rate [Wilson 95%] | brax PPO, no DR: fall rate [Wilson 95%] |
-|---|---|---|---|
-| nominal | 0.0% [0.0, 0.8] (n=500) | 0.8% [0.3, 2.0] (n=500) | 0.6% [0.2, 1.7] (n=500) |
-| friction_x0.5 | 5.2% [3.6, 7.5] (n=500) | 3.8% [2.4, 5.9] (n=500) | 8.6% [6.4, 11.4] (n=500) |
-| friction_x1.5 | 0.0% [0.0, 0.8] (n=500) | 0.6% [0.2, 1.7] (n=500) | 0.6% [0.2, 1.7] (n=500) |
-| torso_mass_+3kg | 0.4% [0.1, 1.4] (n=500) | 0.6% [0.2, 1.7] (n=500) | 1.0% [0.4, 2.3] (n=500) |
-| torso_mass_-3kg | 0.2% [0.0, 1.1] (n=500) | 0.2% [0.0, 1.1] (n=500) | 0.2% [0.0, 1.1] (n=500) |
-| pushes | 67.6% [63.4, 71.6] (n=500) | 88.0% [84.9, 90.6] (n=500) | 87.0% [83.8, 89.7] (n=500) |
-| action_delay_1step | 1.8% [0.9, 3.4] (n=500) | 8.4% [6.3, 11.2] (n=500) | 19.4% [16.2, 23.1] (n=500) |
-| action_delay_2steps | 98.2% [96.6, 99.1] (n=500) | 100.0% [99.2, 100.0] (n=500) | 100.0% [99.2, 100.0] (n=500) |
-| obs_noise_train_level | 0.0% [0.0, 0.8] (n=500) | 0.8% [0.3, 2.0] (n=500) | 1.0% [0.4, 2.3] (n=500) |
-| accurate_solver | 0.0% [0.0, 0.8] (n=500) | 0.4% [0.1, 1.4] (n=500) | 0.4% [0.1, 1.4] (n=500) |
+| condition | brax PPO + DR: fall rate [Wilson 95%] | brax PPO + DR, step-matched: fall rate [Wilson 95%] | brax PPO, no DR: fall rate [Wilson 95%] | RSL-RL PPO + DR: fall rate [Wilson 95%] |
+|---|---|---|---|---|
+| nominal | 0.0% [0.0, 0.8] (n=500) | 0.8% [0.3, 2.0] (n=500) | 0.6% [0.2, 1.7] (n=500) | 100.0% [99.2, 100.0] (n=500) |
+| friction_x0.5 | 5.2% [3.6, 7.5] (n=500) | 3.8% [2.4, 5.9] (n=500) | 8.6% [6.4, 11.4] (n=500) | 100.0% [99.2, 100.0] (n=500) |
+| friction_x1.5 | 0.0% [0.0, 0.8] (n=500) | 0.6% [0.2, 1.7] (n=500) | 0.6% [0.2, 1.7] (n=500) | 100.0% [99.2, 100.0] (n=500) |
+| torso_mass_+3kg | 0.4% [0.1, 1.4] (n=500) | 0.6% [0.2, 1.7] (n=500) | 1.0% [0.4, 2.3] (n=500) | 100.0% [99.2, 100.0] (n=500) |
+| torso_mass_-3kg | 0.2% [0.0, 1.1] (n=500) | 0.2% [0.0, 1.1] (n=500) | 0.2% [0.0, 1.1] (n=500) | 100.0% [99.2, 100.0] (n=500) |
+| pushes | 67.6% [63.4, 71.6] (n=500) | 88.0% [84.9, 90.6] (n=500) | 87.0% [83.8, 89.7] (n=500) | 100.0% [99.2, 100.0] (n=500) |
+| action_delay_1step | 1.8% [0.9, 3.4] (n=500) | 8.4% [6.3, 11.2] (n=500) | 19.4% [16.2, 23.1] (n=500) | 100.0% [99.2, 100.0] (n=500) |
+| action_delay_2steps | 98.2% [96.6, 99.1] (n=500) | 100.0% [99.2, 100.0] (n=500) | 100.0% [99.2, 100.0] (n=500) | 100.0% [99.2, 100.0] (n=500) |
+| obs_noise_train_level | 0.0% [0.0, 0.8] (n=500) | 0.8% [0.3, 2.0] (n=500) | 1.0% [0.4, 2.3] (n=500) | 100.0% [99.2, 100.0] (n=500) |
+| accurate_solver | 0.0% [0.0, 0.8] (n=500) | 0.4% [0.1, 1.4] (n=500) | 0.4% [0.1, 1.4] (n=500) | 100.0% [99.2, 100.0] (n=500) |
 
-Source: `results/sim2sim_brax_dr.json`, `results/sim2sim_brax_dr_matched.json`, `results/sim2sim_brax_nodr.json`
+Source: `results/sim2sim_brax_dr.json`, `results/sim2sim_brax_dr_matched.json`, `results/sim2sim_brax_nodr.json`, `results/sim2sim_rsl_dr.json`
 
 ### Velocity tracking (mean over steps after 1 s, surviving steps only) and mean survival time
 
-| condition | brax PPO + DR: lin-vel err m/s / survival s | brax PPO + DR, step-matched: lin-vel err m/s / survival s | brax PPO, no DR: lin-vel err m/s / survival s |
-|---|---|---|---|
-| nominal | 0.154 [0.150, 0.158] / 20.0 | 0.251 [0.238, 0.265] / 19.9 | 0.154 [0.139, 0.169] / 19.9 |
-| friction_x0.5 | 0.173 [0.157, 0.189] / 19.2 | 0.243 [0.230, 0.256] / 19.4 | 0.188 [0.167, 0.209] / 18.8 |
-| friction_x1.5 | 0.155 [0.151, 0.159] / 20.0 | 0.254 [0.242, 0.265] / 19.9 | 0.148 [0.137, 0.159] / 19.9 |
-| torso_mass_+3kg | 0.145 [0.138, 0.152] / 19.9 | 0.222 [0.209, 0.235] / 19.9 | 0.154 [0.141, 0.168] / 19.8 |
-| torso_mass_-3kg | 0.177 [0.173, 0.181] / 20.0 | 0.279 [0.268, 0.290] / 20.0 | 0.176 [0.168, 0.184] / 20.0 |
-| pushes | 0.356 [0.346, 0.366] / 13.0 | 0.492 [0.477, 0.508] / 9.6 | 0.419 [0.402, 0.436] / 9.6 |
-| action_delay_1step | 0.182 [0.169, 0.196] / 19.7 | 0.313 [0.293, 0.333] / 18.6 | 0.257 [0.233, 0.282] / 17.3 |
-| action_delay_2steps | 0.756 [0.717, 0.794] / 4.6 | 1.092 [1.048, 1.136] / 2.5 | 0.944 [0.901, 0.987] / 2.5 |
-| obs_noise_train_level | 0.164 [0.160, 0.168] / 20.0 | 0.260 [0.247, 0.274] / 19.9 | 0.176 [0.161, 0.191] / 19.8 |
-| accurate_solver | 0.158 [0.154, 0.162] / 20.0 | 0.249 [0.238, 0.260] / 19.9 | 0.151 [0.138, 0.163] / 19.9 |
+| condition | brax PPO + DR: lin-vel err m/s / survival s | brax PPO + DR, step-matched: lin-vel err m/s / survival s | brax PPO, no DR: lin-vel err m/s / survival s | RSL-RL PPO + DR: lin-vel err m/s / survival s |
+|---|---|---|---|---|
+| nominal | 0.154 [0.150, 0.158] / 20.0 | 0.251 [0.238, 0.265] / 19.9 | 0.154 [0.139, 0.169] / 19.9 | 1.924 [1.833, 2.014] / 1.3 |
+| friction_x0.5 | 0.173 [0.157, 0.189] / 19.2 | 0.243 [0.230, 0.256] / 19.4 | 0.188 [0.167, 0.209] / 18.8 | 1.721 [1.616, 1.826] / 1.1 |
+| friction_x1.5 | 0.155 [0.151, 0.159] / 20.0 | 0.254 [0.242, 0.265] / 19.9 | 0.148 [0.137, 0.159] / 19.9 | 1.997 [1.907, 2.087] / 1.3 |
+| torso_mass_+3kg | 0.145 [0.138, 0.152] / 19.9 | 0.222 [0.209, 0.235] / 19.9 | 0.154 [0.141, 0.168] / 19.8 | 1.940 [1.854, 2.026] / 1.2 |
+| torso_mass_-3kg | 0.177 [0.173, 0.181] / 20.0 | 0.279 [0.268, 0.290] / 20.0 | 0.176 [0.168, 0.184] / 20.0 | 1.934 [1.839, 2.030] / 1.3 |
+| pushes | 0.356 [0.346, 0.366] / 13.0 | 0.492 [0.477, 0.508] / 9.6 | 0.419 [0.402, 0.436] / 9.6 | 1.924 [1.834, 2.014] / 1.3 |
+| action_delay_1step | 0.182 [0.169, 0.196] / 19.7 | 0.313 [0.293, 0.333] / 18.6 | 0.257 [0.233, 0.282] / 17.3 | 2.187 [2.079, 2.295] / 1.1 |
+| action_delay_2steps | 0.756 [0.717, 0.794] / 4.6 | 1.092 [1.048, 1.136] / 2.5 | 0.944 [0.901, 0.987] / 2.5 | 2.652 [2.484, 2.820] / 0.9 |
+| obs_noise_train_level | 0.164 [0.160, 0.168] / 20.0 | 0.260 [0.247, 0.274] / 19.9 | 0.176 [0.161, 0.191] / 19.8 | 1.932 [1.838, 2.026] / 1.3 |
+| accurate_solver | 0.158 [0.154, 0.162] / 20.0 | 0.249 [0.238, 0.260] / 19.9 | 0.151 [0.138, 0.163] / 19.9 | 1.905 [1.816, 1.995] / 1.3 |
 
-Source: `results/sim2sim_brax_dr.json`, `results/sim2sim_brax_dr_matched.json`, `results/sim2sim_brax_nodr.json`
+Source: `results/sim2sim_brax_dr.json`, `results/sim2sim_brax_dr_matched.json`, `results/sim2sim_brax_nodr.json`, `results/sim2sim_rsl_dr.json`
 
 ### DR vs no-DR, paired (final DR checkpoint vs final no-DR checkpoint)
 
@@ -193,16 +219,19 @@ Same seeds (initial state, command, pushes) for both policies, so episodes are p
 
 ## Videos
 
-- brax PPO + DR, mjx: `media/brax_dr_mjx.mp4` (301 frames, fell: False; MJX env, deterministic actor in JAX, training obs noise on, pushes disabled)
-- brax PPO + DR, mujoco_cpu: `media/brax_dr_mujoco_cpu.mp4` (301 frames, fell: False; plain CPU MuJoCo, ONNX policy, clean obs, no pushes)
-- brax PPO, no DR, mjx: `media/brax_nodr_mjx.mp4` (301 frames, fell: False; MJX env, deterministic actor in JAX, training obs noise on, pushes disabled)
-- brax PPO, no DR, mujoco_cpu: `media/brax_nodr_mujoco_cpu.mp4` (301 frames, fell: False; plain CPU MuJoCo, ONNX policy, clean obs, no pushes)
+- brax PPO + DR, mjx: `media/brax_dr_mjx.mp4` (301 frames at 25 fps, fell: False, base travelled 5.12 m; MJX env, deterministic actor in JAX, training obs noise on, pushes disabled)
+- brax PPO + DR, mujoco_cpu: `media/brax_dr_mujoco_cpu.mp4` (301 frames at 25 fps, fell: False, base travelled 4.93 m; plain CPU MuJoCo, ONNX policy, clean obs, no pushes)
+- brax PPO, no DR, mjx: `media/brax_nodr_mjx.mp4` (301 frames at 25 fps, fell: False, base travelled 5.27 m; MJX env, deterministic actor in JAX, training obs noise on, pushes disabled)
+- brax PPO, no DR, mujoco_cpu: `media/brax_nodr_mujoco_cpu.mp4` (301 frames at 25 fps, fell: False, base travelled 5.14 m; plain CPU MuJoCo, ONNX policy, clean obs, no pushes)
+- RSL-RL PPO + DR, mjx: `media/rsl_dr_mjx.mp4` (4 frames at 25 fps, fell: True, base travelled 0.06 m; MJX env, deterministic actor in JAX, training obs noise on, pushes disabled)
+- RSL-RL PPO + DR, mujoco_cpu: `media/rsl_dr_mujoco_cpu.mp4` (6 frames at 25 fps, fell: True, base travelled 0.03 m; plain CPU MuJoCo, ONNX policy, clean obs, no pushes)
 
 ## Isaac Lab
 
-- Verdict: **not feasible on this host** (`results/isaac_lab_check.json`, details in docs/ISAAC_LAB.md).
+- Verdict: **not run: blocked under this project's constraints** (`results/isaac_lab_check.json`, details in docs/ISAAC_LAB.md).
 
 ## Failures and errors
 
 - RSL-RL run in parallel with the no-DR brax run (results/train_rsl_dr_parallel_attempt.json): stopped manually after ~23 min: running both jobs on the shared L4 gave each far less than solo throughput (see the scheduling section), so the runs were switched to sequential; the attempt's JSON status still reads 'running' because it was interrupted, it is not a finished run and its policy was discarded
 - JAX GPU matmul in a fresh process (scripts/eval_mjx.py): XlaRuntimeError INTERNAL: an unsupported value or parameter was passed to the function; worked around by importing torch before jax (see comment in scripts/eval_mjx.py); training processes were not affected
+- RSL-RL PPO run (results/train_rsl_dr.json): trained to the 72 min cap without learning to stand: the final mean training episode length is far below the 1000-step episode, and the exported policy fell in every evaluated episode in both MJX (mjx_eval_rsl_dr.json) and CPU MuJoCo (sim2sim_rsl_dr.json). Not debugged within the time budget; one untested hypothesis is that Playground's rsl_rl_config has no tuned entry for G1JoystickFlatTerrain
