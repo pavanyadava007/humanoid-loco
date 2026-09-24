@@ -2,7 +2,7 @@
 PY ?= .venv/bin/python
 STEPS ?= 100000000
 CAP ?= 125
-EPISODES ?= 100
+EPISODES ?= 500
 
 .PHONY: setup train train-dr train-nodr train-rsl export eval eval-mjx render parity isaac report test lint
 

@@ -85,6 +85,13 @@ def main() -> None:
     ap.add_argument("--policy", required=True)
     ap.add_argument("--envs", type=int, default=1024)
     args = ap.parse_args()
+    # Workaround: in this venv (torch 2.8 pins the nvidia cu12.8 wheels that JAX also uses) a fresh
+    # process that imports JAX alone fails every GPU matmul with "INTERNAL: an unsupported value or
+    # parameter was passed to the function". Importing torch first loads its CUDA libraries and the
+    # JAX matmuls then run. Observed and worked around, root cause not investigated further.
+    import torch
+
+    torch.cuda.is_available()  # load torch's CUDA libraries before JAX initializes its GPU backend
     import jax
 
     jax.config.update("jax_compilation_cache_dir", str(ROOT / ".jax_cache"))

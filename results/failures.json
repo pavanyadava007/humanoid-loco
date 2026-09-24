@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "label": "NVIDIA L4, simulation, no real robot",
+    "gpu": "NVIDIA L4",
+    "host_cpu_count": 32,
+    "python": "3.10.21",
+    "git_rev": "a2676d3",
+    "written_utc": "2026-09-24T04:02:02+00:00"
+  },
+  "items": [
+    {
+      "what": "RSL-RL run in parallel with the no-DR brax run (results/train_rsl_dr_parallel_attempt.json)",
+      "error": "stopped manually after ~23 min: running both jobs on the shared L4 gave each far less than solo throughput (see the scheduling section), so the runs were switched to sequential; the attempt's JSON status still reads 'running' because it was interrupted, it is not a finished run and its policy was discarded"
+    },
+    {
+      "what": "JAX GPU matmul in a fresh process (scripts/eval_mjx.py)",
+      "error": "XlaRuntimeError INTERNAL: an unsupported value or parameter was passed to the function; worked around by importing torch before jax (see comment in scripts/eval_mjx.py); training processes were not affected"
+    }
+  ]
+}

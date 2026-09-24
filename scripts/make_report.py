@@ -14,8 +14,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from hloco.common import HARDWARE_LABEL, RESULTS, ROOT  # noqa: E402
+from hloco.stats import mcnemar_exact  # noqa: E402
 
-POLICIES = [("brax_dr", "brax PPO + DR"), ("brax_nodr", "brax PPO, no DR"), ("rsl_dr", "RSL-RL PPO + DR")]
+POLICIES = [("brax_dr", "brax PPO + DR"), ("brax_dr_matched", "brax PPO + DR, step-matched"),
+            ("brax_nodr", "brax PPO, no DR"), ("rsl_dr", "RSL-RL PPO + DR")]
+TRAIN_RUNS = [("brax_dr", "brax PPO + DR"), ("brax_nodr", "brax PPO, no DR"), ("rsl_dr", "RSL-RL PPO + DR")]
 
 
 def load(name: str) -> dict | None:
@@ -57,7 +60,7 @@ def final_reward(tr: dict) -> float | None:
 def training_table() -> list[str]:
     rows = ["| run | algorithm | DR | env steps | wall clock | env steps/s (steady) | final reward | status | source |",
             "|---|---|---|---|---|---|---|---|---|"]
-    for name, label in POLICIES:
+    for name, label in TRAIN_RUNS:
         tr = load(f"train_{name}.json")
         if tr is None:
             rows.append(f"| {name} | {label} | | not run | | | | | |")
@@ -143,19 +146,62 @@ def parity_rows() -> list[str]:
     return rows or ["_parity checks not run_"]
 
 
-def dr_effect_rows() -> list[str]:
-    a, b = load("sim2sim_brax_dr.json"), load("sim2sim_brax_nodr.json")
+def matched_curve_rows() -> list[str]:
+    a, b = load("train_brax_dr.json"), load("train_brax_nodr.json")
     if not a or not b:
-        return ["_DR vs no-DR comparison needs both sim2sim_brax_dr.json and sim2sim_brax_nodr.json_"]
-    rows = ["| condition | falls DR | falls no-DR | paired episodes: only DR fell / only no-DR fell |", "|---|---|---|---|"]
+        return ["_needs train_brax_dr.json and train_brax_nodr.json_"]
+    ca = {r["step"]: r for r in a["curve"]}
+    rows = ["| env steps | DR run reward | no-DR run reward |", "|---|---|---|"]
+    n = 0
+    for r in b["curve"]:
+        if r["step"] in ca:
+            rows.append(f"| {r['step']:,} | {f(ca[r['step']].get('episode_reward'), 2)} | {f(r.get('episode_reward'), 2)} |")
+            n += 1
+    if n == 0:
+        return ["_no common evaluation steps between the two runs_"]
+    return rows + ["", "Both runs use num_timesteps 130M with 20 evaluation points, so evaluation steps coincide; "
+                   "each run is scored by brax's evaluator in its own training env (the DR run's eval env is randomized, the no-DR run's is nominal)."]
+
+
+def dr_effect_rows(dr_name: str = "brax_dr") -> list[str]:
+    a, b = load(f"sim2sim_{dr_name}.json"), load("sim2sim_brax_nodr.json")
+    if not a or not b:
+        return [f"_DR vs no-DR comparison needs both sim2sim_{dr_name}.json and sim2sim_brax_nodr.json_"]
+    rows = ["| condition | falls DR | falls no-DR | paired episodes: only DR fell / only no-DR fell | exact McNemar p |",
+            "|---|---|---|---|---|"]
     for c, s in a["summary"].items():
         if c not in b["summary"]:
             continue
         ea, eb = a["episodes"][c], b["episodes"][c]
         only_a = sum(x["fell"] and not y["fell"] for x, y in zip(ea, eb, strict=True))
         only_b = sum(y["fell"] and not x["fell"] for x, y in zip(ea, eb, strict=True))
-        rows.append(f"| {c} | {s['falls']}/{s['episodes']} | {b['summary'][c]['falls']}/{b['summary'][c]['episodes']} | {only_a} / {only_b} |")
-    return rows + ["", "Same seeds (initial state, command, pushes) for both policies, so episodes are paired."]
+        p = mcnemar_exact(only_a, only_b)
+        rows.append(f"| {c} | {s['falls']}/{s['episodes']} | {b['summary'][c]['falls']}/{b['summary'][c]['episodes']} | "
+                    f"{only_a} / {only_b} | {p:.2g} |")
+    return rows + ["", "Same seeds (initial state, command, pushes) for both policies, so episodes are paired; "
+                   "the p-value is the two-sided exact McNemar test on the discordant pairs (one training seed per policy, "
+                   "so it speaks to these two checkpoints, not to DR in general)."]
+
+
+def scheduling_rows() -> list[str]:
+    """Why the no-DR and RSL-RL runs were run one after the other (numbers from the run JSONs)."""
+    dr, nodr, att = load("train_brax_dr.json"), load("train_brax_nodr.json"), load("train_rsl_dr_parallel_attempt.json")
+    if not (dr and nodr and att) or len(nodr["curve"]) < 2:
+        return ["_scheduling data not available_"]
+    c0, c1 = nodr["curve"][0], nodr["curve"][1]
+    brax_par = (c1["step"] - c0["step"]) / (c1["wall_s"] - c0["wall_s"])
+    pts = [r for r in att["curve"] if c0["wall_s"] <= r["wall_s"] <= c1["wall_s"]]
+    rsl_par = (pts[-1]["step"] - pts[0]["step"]) / (pts[-1]["wall_s"] - pts[0]["wall_s"]) if len(pts) >= 2 else None
+    rows = [
+        f"- brax PPO alone on the L4 (DR run, steady): {f(dr['env_steps_per_s_steady'], 0)} env steps/s (`results/train_brax_dr.json`).",
+        f"- brax PPO (no-DR run) while the RSL-RL job ran on the same GPU: {f(brax_par, 0)} env steps/s "
+        f"(first two eval points of `results/train_brax_nodr.json`).",
+        f"- RSL-RL over the same wall-clock window: {f(rsl_par, 0)} env steps/s (`results/train_rsl_dr_parallel_attempt.json`).",
+    ]
+    if rsl_par:
+        rows.append(f"- Combined parallel throughput {f(brax_par + rsl_par, 0)} env steps/s vs {f(dr['env_steps_per_s_steady'], 0)} for one brax job alone, "
+                    "so the RSL-RL job was stopped and the runs were made sequential (no-DR brax first, then RSL-RL alone).")
+    return rows
 
 
 def isaac_rows() -> list[str]:
@@ -236,11 +282,11 @@ def failures() -> list[str]:
 
 
 def headline() -> list[str]:
-    rows = ["| policy | train env steps | MJX+DR fall rate | CPU MuJoCo nominal fall rate [Wilson 95%] | nominal lin-vel err (m/s) | worst sim-to-sim condition (fall rate) |",
+    rows = ["| policy | checkpoint env steps | MJX+DR fall rate | CPU MuJoCo nominal fall rate [Wilson 95%] | nominal lin-vel err (m/s) | worst sim-to-sim condition (fall rate) |",
             "|---|---|---|---|---|---|"]
     for n, lab in POLICIES:
-        tr, mj, ss = load(f"train_{n}.json"), load(f"mjx_eval_{n}.json"), load(f"sim2sim_{n}.json")
-        if tr is None:
+        op, mj, ss = load(f"onnx_parity_{n}.json"), load(f"mjx_eval_{n}.json"), load(f"sim2sim_{n}.json")
+        if op is None:
             continue
         mjx = pct(mj["with_dr"]["fall_rate"]) if mj else "n/a"
         if ss:
@@ -251,7 +297,9 @@ def headline() -> list[str]:
             worsttxt = f"{worst[0]} ({pct(worst[1]['fall_rate'])})"
         else:
             nomtxt, err, worsttxt = "n/a", "n/a", "n/a"
-        rows.append(f"| {lab} | {tr['final_step']:,} | {mjx} | {nomtxt} | {err} | {worsttxt} |")
+        step = op.get("checkpoint_step")
+        rows.append(f"| {lab} | {step:,} | {mjx} | {nomtxt} | {err} | {worsttxt} |" if step is not None
+                    else f"| {lab} | n/a | {mjx} | {nomtxt} | {err} | {worsttxt} |")
     return rows
 
 
@@ -278,8 +326,10 @@ def main() -> None:
         "### Training curves",
         "",
     ]
-    for n, _ in POLICIES:
+    for n, _ in TRAIN_RUNS:
         parts += curve_table(n) + [""]
+    parts += ["### DR vs no-DR at matched env steps (brax in-loop eval reward)", "", *matched_curve_rows(), ""]
+    parts += ["### GPU scheduling (parallel vs sequential)", "", *scheduling_rows(), ""]
     parts += [
         "## Common MJX evaluation (all policies, same protocol)",
         "",
@@ -303,9 +353,13 @@ def main() -> None:
         "",
         *trk,
         "",
-        "### DR vs no-DR, paired",
+        "### DR vs no-DR, paired (final DR checkpoint vs final no-DR checkpoint)",
         "",
-        *dr_effect_rows(),
+        *dr_effect_rows("brax_dr"),
+        "",
+        "### DR vs no-DR, paired, step-matched (DR snapshot at the no-DR run's final step)",
+        "",
+        *dr_effect_rows("brax_dr_matched"),
         "",
         "## Videos",
         "",

@@ -58,3 +58,11 @@ def test_wilson_known_values():
     assert abs(lo) < 1e-12 and abs(hi - 0.0370) < 1e-3
     lo, hi = wilson(50, 100)
     assert abs(lo - 0.4038) < 1e-3 and abs(hi - 0.5962) < 1e-3
+
+
+def test_mcnemar_exact():
+    from hloco.stats import mcnemar_exact
+
+    assert mcnemar_exact(0, 0) == 1.0
+    assert abs(mcnemar_exact(0, 5) - 0.0625) < 1e-12
+    assert abs(mcnemar_exact(3, 3) - 1.0) < 1e-12

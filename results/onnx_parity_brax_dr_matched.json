@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "label": "NVIDIA L4, simulation, no real robot",
+    "gpu": "NVIDIA L4",
+    "host_cpu_count": 32,
+    "python": "3.10.21",
+    "git_rev": "a2676d3",
+    "written_utc": "2026-09-24T04:41:39+00:00"
+  },
+  "policy": "brax_dr_matched",
+  "checkpoint_step": 75694080,
+  "onnx_opset": 17,
+  "onnx_file": "policy.onnx",
+  "onnx_bytes": 901313,
+  "n_obs": 2000,
+  "obs_source": "CPU MuJoCo rollouts from the reset distribution with random actions",
+  "reference": "brax ppo_networks.make_inference_fn(deterministic=True), JAX",
+  "max_abs_err_onnx_vs_reference": 6.556510925292969e-07,
+  "mean_abs_err_onnx_vs_reference": 7.790680456309929e-08,
+  "max_abs_err_numpy_vs_reference": 8.344650268554688e-07
+}

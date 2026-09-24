@@ -27,3 +27,13 @@ def mean_ci(xs: list[float], z: float = 1.959963984540054) -> tuple[float, float
     var = sum((x - m) ** 2 for x in xs) / (n - 1)
     h = z * math.sqrt(var / n)
     return (m, m - h, m + h)
+
+
+def mcnemar_exact(b: int, c: int) -> float:
+    """Two-sided exact McNemar p-value from the discordant pair counts b and c."""
+    n = b + c
+    if n == 0:
+        return 1.0
+    k = min(b, c)
+    tail = sum(math.comb(n, i) for i in range(k + 1)) / 2**n
+    return min(1.0, 2 * tail)

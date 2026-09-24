@@ -9,11 +9,14 @@ What this project does:
    [MuJoCo Playground](https://github.com/google-deepmind/mujoco_playground) (`G1JoystickFlatTerrain`, MJX on GPU)
    with brax PPO and the Playground default locomotion config, **with** the env's domain randomizer
    (floor friction, joint friction loss, armature, link masses, torso mass, joint offsets).
-2. Trains the same task **without** domain randomization (same seed, same step budget) as an ablation.
-3. Trains the same task with **rsl-rl-lib PPO** through Playground's torch wrapper (`wrapper_torch.RSLRLBraxWrapper`).
+2. Trains the same task **without** domain randomization (same seed, same PPO config) as an ablation. Its wall-clock
+   cap was shorter (75 min vs 125 min), so it reached fewer env steps; DR vs no-DR is therefore compared twice:
+   final checkpoint vs final checkpoint, and step-matched (a snapshot of the DR run taken at the no-DR run's final step).
+3. Trains the same task with **rsl-rl-lib PPO** through Playground's torch wrapper (`wrapper_torch.RSLRLBraxWrapper`),
+   with a 72 min wall-clock cap.
 4. Exports every actor to a static **ONNX** graph (opset 17) and checks action parity against the training framework.
 5. Runs the ONNX policies closed-loop at the 50 Hz policy rate in **plain CPU MuJoCo** (`mujoco` Python bindings, not MJX)
-   on the same G1 model, 100 seeded episodes per condition: nominal, floor friction x0.5 / x1.5, torso mass +/-3 kg,
+   on the same G1 model, 500 seeded episodes per condition: nominal, floor friction x0.5 / x1.5, torso mass +/-3 kg,
    random pushes, 1 and 2 control-step action latency, training-level sensor noise, and a more accurate solver.
    Reports fall rate with Wilson 95% intervals, survival time and velocity-tracking error.
 6. Checks (without downloading it) whether Isaac Lab / Isaac Sim could run on this host: see `docs/ISAAC_LAB.md`.
@@ -21,6 +24,13 @@ What this project does:
 ## Headline results
 
 <!-- RESULTS:BEGIN -->
+_Generated from results/*.json by scripts/make_report.py. NVIDIA L4, simulation, no real robot._
+
+| policy | checkpoint env steps | MJX+DR fall rate | CPU MuJoCo nominal fall rate [Wilson 95%] | nominal lin-vel err (m/s) | worst sim-to-sim condition (fall rate) |
+|---|---|---|---|---|---|
+| brax PPO + DR | 130,744,320 | 48.2% | 0.0% [0.0, 0.8] | 0.154 | action_delay_2steps (98.2%) |
+| brax PPO + DR, step-matched | 75,694,080 | 67.7% | 0.8% [0.3, 2.0] | 0.251 | action_delay_2steps (100.0%) |
+| brax PPO, no DR | 75,694,080 | 69.2% | 0.6% [0.2, 1.7] | 0.154 | action_delay_2steps (100.0%) |
 <!-- RESULTS:END -->
 
 Full tables (training curves, common MJX evaluation, parity checks, every sim-to-sim condition, paired DR vs no-DR
@@ -80,8 +90,12 @@ docs/            RESULTS.md and ISAAC_LAB.md (generated)
 - Sim-to-sim here means MJX (JAX implementation, float32) to CPU MuJoCo (float64) with the same MJCF. Both share
   the same simplified collision model (explicit contact pairs only: feet-floor, foot-foot, hand-thigh), actuator model and solver options, so passing this
   evaluation is not evidence about transfer to hardware.
-- One seed per training configuration, capped at about 2 h wall clock on a shared GPU; conclusions about DR vs no-DR
-  and brax vs RSL-RL are single-run observations, not statistically established algorithm comparisons.
+- One seed per training configuration, each capped by wall clock on a shared GPU (DR 125 min, no-DR 75 min, RSL-RL
+  72 min; the brax DR run finished its 130M-step budget before its cap). The Playground default budget for this task
+  is 200M env steps; none of the runs reached it. Conclusions about DR vs no-DR and brax vs RSL-RL are single-run
+  observations; the paired McNemar p-values in docs/RESULTS.md compare two checkpoints, not two algorithms.
+- The CPU MuJoCo push condition (0.5 to 1.5 m/s base-velocity kicks every 2 to 4 s) is harsher than the training
+  pushes (0.1 to 2.0 m/s every 5 to 10 s) on purpose.
 - The torso-mass perturbation (+/-3 kg) is outside the +/-1 kg training randomization on purpose; friction x0.5 of the
   nominal 0.6 (0.3) is also below the 0.4 to 1.0 training range. Both test extrapolation.
 - Rewards are only computed inside MJX; the CPU MuJoCo evaluation reports falls, survival time and tracking error.
