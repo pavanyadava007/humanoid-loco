@@ -8,3 +8,4 @@ logs/
 *.tmp
 .ruff_cache/
 checkpoints/*/snapshots/
+space/

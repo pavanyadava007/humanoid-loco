@@ -3,6 +3,14 @@
 **Everything here is NVIDIA L4, simulation, no real robot.** Transfer between simulators is called
 sim-to-sim (MJX to CPU MuJoCo). Nothing in this repository has been run on hardware.
 
+<p align="center"><img src="media/g1_walk.gif" width="360" alt="Unitree G1 walking in plain CPU MuJoCo"></p>
+
+**Live demo with all videos and result tables: [huggingface.co/spaces/pavanyadava07/humanoid-loco](https://huggingface.co/spaces/pavanyadava07/humanoid-loco)**
+
+Videos in this repo: [PPO + DR in CPU MuJoCo](media/brax_dr_mujoco_cpu.mp4) |
+[PPO + DR in MJX](media/brax_dr_mjx.mp4) | [no-DR ablation](media/brax_nodr_mujoco_cpu.mp4) |
+[failed RSL-RL run](media/rsl_dr_mujoco_cpu.mp4)
+
 What this project does:
 
 1. Trains a joystick (velocity-command) walking policy for the Unitree G1 humanoid in
