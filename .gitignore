@@ -1,0 +1,9 @@
+.venv/
+.venv-*/
+.jax_cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+logs/
+*.tmp
+.ruff_cache/

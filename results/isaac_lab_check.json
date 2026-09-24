@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "label": "NVIDIA L4, simulation, no real robot",
+    "gpu": "NVIDIA L4",
+    "host_cpu_count": 32,
+    "python": "3.10.21",
+    "git_rev": "uncommitted",
+    "written_utc": "2026-09-24T01:31:02+00:00"
+  },
+  "host_os": "Amazon Linux 2023.9.20251117",
+  "host_glibc": "2.34",
+  "host_python": "3.10.21",
+  "gpu_and_driver": "NVIDIA L4, 580.95.05",
+  "free_disk_gb": 5.0,
+  "index": "https://pypi.nvidia.com",
+  "packages": {
+    "isaacsim": {
+      "linux_x86_64_wheels_listed": 10,
+      "manylinux_glibc_tags": [
+        "2.34",
+        "2.35"
+      ],
+      "lowest_glibc_required": "2.34",
+      "wheels_installable_on_host_glibc": [
+        "isaacsim-4.0.0.0-cp310-none-manylinux_2_34_x86_64.whl",
+        "isaacsim-4.1.0.0-cp310-none-manylinux_2_34_x86_64.whl",
+        "isaacsim-4.2.0.2-cp310-none-manylinux_2_34_x86_64.whl",
+        "isaacsim-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl"
+      ],
+      "latest_wheel": "isaacsim-6.1.0.0-cp312-none-manylinux_2_35_x86_64.whl",
+      "latest_wheel_bytes_HEAD": 631142,
+      "newest_host_installable_wheel": "isaacsim-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl",
+      "newest_host_installable_wheel_bytes_HEAD": 30238,
+      "python_tags": [
+        "cp310",
+        "cp311",
+        "cp312"
+      ]
+    },
+    "isaacsim-kernel": {
+      "linux_x86_64_wheels_listed": 10,
+      "manylinux_glibc_tags": [
+        "2.34",
+        "2.35"
+      ],
+      "lowest_glibc_required": "2.34",
+      "wheels_installable_on_host_glibc": [
+        "isaacsim_kernel-4.0.0.0-cp310-none-manylinux_2_34_x86_64.whl",
+        "isaacsim_kernel-4.1.0.0-cp310-none-manylinux_2_34_x86_64.whl",
+        "isaacsim_kernel-4.2.0.2-cp310-none-manylinux_2_34_x86_64.whl",
+        "isaacsim_kernel-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl"
+      ],
+      "latest_wheel": "isaacsim_kernel-6.1.0.0-cp312-none-manylinux_2_35_x86_64.whl",
+      "latest_wheel_bytes_HEAD": 74350007,
+      "newest_host_installable_wheel": "isaacsim_kernel-4.5.0.0-cp310-none-manylinux_2_34_x86_64.whl",
+      "newest_host_installable_wheel_bytes_HEAD": 19244,
+      "python_tags": [
+        "cp310",
+        "cp311",
+        "cp312"
+      ]
+    }
+  },
+  "wheel_bytes_downloaded": 0,
+  "blockers": [
+    "free disk 5.0 GB, below the 30 GB threshold this check assumes for Isaac Sim + Isaac Lab + shader/extension caches (assumption, not measured); the brief also caps Isaac downloads at 2 GB"
+  ],
+  "notes": [
+    "Isaac Sim 4.x wheels are tagged manylinux_2_34 (cp310), so glibc 2.34 alone does not block pip install of 4.x; 5.x/6.x wheels need glibc 2.35. The Isaac Sim documentation lists Ubuntu and Windows as supported OSes; Amazon Linux 2023 is not listed: runtime compatibility on this OS was not tested.",
+    "Only the isaacsim and isaacsim-kernel wheel sizes were measured (HEAD). A full Isaac Sim pip install pulls many more isaacsim-* packages plus extension caches; their total size was not measured here."
+  ],
+  "verdict": "not feasible on this host",
+  "method": "HTML index listing + HTTP HEAD only; no wheel was downloaded or installed"
+}
