@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "label": "NVIDIA L4, simulation, no real robot",
+    "gpu": "NVIDIA L4",
+    "host_cpu_count": 32,
+    "python": "3.10.21",
+    "git_rev": "93ba38a",
+    "written_utc": "2026-09-24T22:14:54+00:00"
+  },
+  "file": "media/isaac_g1_rough.mp4",
+  "source": "Isaac Lab RecordVideo (rgb_array render of the viewport camera), transcoded with ffmpeg",
+  "raw_file": "logs/isaac/video/g1_rough/rl-video-step-0.mp4",
+  "raw_probe": {
+    "codec": "h264",
+    "pix_fmt": "yuv420p",
+    "width": 960,
+    "height": 540,
+    "fps": "50/1",
+    "frames": 499,
+    "duration_s": 9.98
+  },
+  "trimmed_leading_frames": 4,
+  "trimmed_start_s": 0.08,
+  "trim_rule": "leading raw frames whose mean luma differs from the video median by more than 15% (renderer warm-up)",
+  "leading_raw_frame_luma": [
+    16.0,
+    32.7406,
+    35.9234,
+    35.8549,
+    156.384,
+    156.844,
+    156.585
+  ],
+  "crf": 24,
+  "bytes": 1235738,
+  "codec": "h264",
+  "pix_fmt": "yuv420p",
+  "width": 960,
+  "height": 540,
+  "fps": "25/1",
+  "frames": 248,
+  "duration_s": 9.92
+}

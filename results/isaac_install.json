@@ -4,8 +4,8 @@
     "gpu": "NVIDIA L4",
     "host_cpu_count": 32,
     "python": "3.10.21",
-    "git_rev": "ba71cbd",
-    "written_utc": "2026-09-24T20:42:17+00:00"
+    "git_rev": "93ba38a",
+    "written_utc": "2026-09-24T22:22:17+00:00"
   },
   "host_os": "Amazon Linux release 2023.9.20251117 (Amazon Linux)",
   "glibc": "2.34",
@@ -34,10 +34,10 @@
     "/dev/nvme0n1p1  360G  316G   45G  88% /"
   ],
   "disk_bytes": {
-    ".venv-isaac": 16546427883,
+    ".venv-isaac": 16733725274,
     "third_party/IsaacLab": 92349529,
-    "logs/isaac": 137707603,
-    "~/.cache/ov (Omniverse runtime cache: downloaded assets, shaders)": 445358779,
+    "logs/isaac": 528864380,
+    "~/.cache/ov (Omniverse runtime cache: downloaded assets, shaders)": 517898941,
     "~/.cache/uv (hard-links the same files as .venv-isaac, not extra disk)": 16079514046
   },
   "note_disk": "du -sb counts apparent size per path; .venv-isaac and the uv cache share hard-linked files, so their sum overstates real use; the filesystem used-space readings during the install are listed below.",

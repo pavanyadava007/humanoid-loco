@@ -71,6 +71,14 @@ def isaac_section() -> tuple[str, str, str]:
                f"{tr['final_step'] / 1e6:.1f}M env steps in {tr['wall_clock_s'] / 60:.0f} minutes on one NVIDIA L4. Constant command "
                f"{e(v['command_vx_vy_wz'][0])} m/s forward; the camera follows one robot (Isaac Lab G1, {e(play['model']['num_joints'])} joints). "
                "Trained and shown in the same simulator: this is not a transfer test.</figcaption></figure>")
+    trr, evr, vr = load_opt("isaac_train_g1_rough.json"), load_opt("isaac_eval_g1_rough.json"), load_opt("isaac_video_g1_rough.json")
+    if trr and vr and (ROOT / vr["file"]).exists():
+        nom = evr["summary"].get("nominal") if evr else None
+        ev_txt = (f" Within Isaac Sim, nominal: {nom['falls']}/{nom['episodes']} falls on the task's own terrain mix." if nom else "")
+        fig += (f"<figure class='vid big'><video src='media/isaac_g1_rough.mp4' poster='media/isaac_g1_rough.jpg' controls muted loop "
+                f"playsinline preload=metadata></video><figcaption><b>Isaac Lab: RSL-RL PPO, Isaac-Velocity-Rough-G1-v0 (rough terrain, height scan)</b><br>"
+                f"{trr['final_step'] / 1e6:.1f}M env steps in {trr['wall_clock_s'] / 60:.0f} minutes ({e(trr['status'])}, "
+                f"{trr['iterations_completed']} of {trr['requested_max_iterations']} iterations).{e(ev_txt)}</figcaption></figure>")
     cmp = load_opt("compare_video.json")
     if cmp and (ROOT / cmp["file"]).exists():
         fig += ("<figure class='vid big'><video src='media/compare_mujoco_vs_isaac.mp4' poster='media/compare_mujoco_vs_isaac.jpg' "
@@ -123,7 +131,7 @@ def main() -> None:
     isaac_fig, isaac_body, isaac_limit = isaac_section()
     if isaac_fig:
         shutil.copy2(ROOT / "media" / "isaac_g1_flat.mp4", OUT / "media" / "isaac_g1_flat.mp4")
-        for fname in ("isaac_g1_flat.mp4", "compare_mujoco_vs_isaac.mp4"):
+        for fname in ("isaac_g1_flat.mp4", "isaac_g1_rough.mp4", "compare_mujoco_vs_isaac.mp4"):
             if not (ROOT / "media" / fname).exists():
                 continue
             if fname != "isaac_g1_flat.mp4":
