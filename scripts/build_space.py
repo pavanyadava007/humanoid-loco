@@ -164,7 +164,7 @@ sdk: static
 app_file: index.html
 pinned: false
 license: mit
-short_description: Unitree G1 walking policy, PPO + domain randomization, sim-to-sim
+short_description: Unitree G1 walking with PPO + domain randomization
 tags:
   - robotics
   - reinforcement-learning
